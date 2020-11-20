@@ -82,3 +82,44 @@ test_that("findTopCorrelations approximations work well enough", {
     df2 <- suppressWarnings(findTopCorrelations(mat, number=1, d=5))
     expect_identical(df$negative, df2$negative)
 })
+
+set.seed(109109102)
+test_that("findTopCorrelations works for the top cross-correlations", {
+    sce1 <- mockSCE(ngenes=100)
+    sce1 <- logNormCounts(sce1)
+
+    sce2 <- mockSCE(ngenes=200)
+    sce2 <- logNormCounts(sce2)
+
+    df <- findTopCorrelations(sce1, y=sce2, number=20, d=ncol(sce1), BSPARAM=BiocSingular::ExactParam()) 
+    df2 <- findTopCorrelations(sce1, y=sce2, number=20, d=NA)
+    expect_identical(df, df2)
+
+    # Performing a reference computation.
+    all.cor <- cor(t(logcounts(sce1)), t(logcounts(sce2)), method="spearman")
+    collected.best <- collected.worst <- collected.best.cor <- collected.worst.cor <- vector("list", nrow(all.cor))
+    for (i in seq_len(nrow(all.cor))) {
+        current <- order(all.cor[i,], decreasing=TRUE)
+
+        my.best <- head(current, 20)
+        collected.best[[i]] <- colnames(all.cor)[my.best]
+        collected.best.cor[[i]] <- all.cor[i,my.best]
+
+        my.worst <- rev(tail(current, 20))
+        collected.worst[[i]] <- colnames(all.cor)[my.worst]
+        collected.worst.cor[[i]] <- all.cor[i,my.worst]
+    }
+
+    expect_identical(df$positive$gene2, unlist(collected.best))
+    expect_equal(df$positive$rho, unname(unlist(collected.best.cor)))
+    expect_identical(df$negative$gene2, unlist(collected.worst))
+    expect_equal(df$negative$rho, unname(unlist(collected.worst.cor)))
+
+    # Expect the same results from one setting of direction.
+    dfp <- findTopCorrelations(sce1, y=sce2, number=20, d=ncol(sce1), direction="positive", BSPARAM=BiocSingular::ExactParam()) 
+    expect_identical(dfp, df["positive"])
+
+    dfn <- findTopCorrelations(sce1, y=sce2, number=20, d=ncol(sce2), direction="negative", BSPARAM=BiocSingular::ExactParam()) 
+    expect_identical(dfn, df["negative"])
+})
+

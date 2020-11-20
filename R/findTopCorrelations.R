@@ -182,7 +182,7 @@ NULL
         combined <- cbind(t(x), t(y))
     } else {
         in.first <- seq_len(nrow(x))
-        in.first.neg <- nrow(x) + in.first.pos
+        in.first.neg <- nrow(x) + in.first
         in.second <- 2L*nrow(x) + seq_len(nrow(y))
 
         # We make positive and negative versions of all of them for symmetry's sake.
@@ -201,7 +201,7 @@ NULL
 
     if (direction %in% c("positive", "both")) {
         nn.out <- queryKNN(query=search.out[in.first,,drop=FALSE], k=number, 
-            get.distance=FALSE, BNINDEX=BNINDEX, BPPARAM=BPPARAM)
+            get.distance=FALSE, BNINDEX=precomputed, BPPARAM=BPPARAM)
         rho <- rowBlockApply(rank.out[in.first,,drop=FALSE], FUN=.compute_exact_neighbor_rho, 
             other=rank.out[in.second,,drop=FALSE], indices=nn.out$index, BPPARAM=BPPARAM)
         output$positive <- list(index=nn.out$index, rho=do.call(rbind, rho))
@@ -209,7 +209,7 @@ NULL
 
     if (direction %in% c("negative", "both")) {
         nn.out <- queryKNN(query=search.out[in.first.neg,,drop=FALSE], k=number, 
-            get.distance=FALSE, BNINDEX=BNINDEX, BPPARAM=BPPARAM)
+            get.distance=FALSE, BNINDEX=precomputed, BPPARAM=BPPARAM)
         rho <- rowBlockApply(rank.out[in.first,,drop=FALSE], FUN=.compute_exact_neighbor_rho, 
             other=rank.out[in.second,,drop=FALSE], indices=nn.out$index, BPPARAM=BPPARAM)
         output$negative <- list(index=nn.out$index, rho=do.call(rbind, rho))
