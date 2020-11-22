@@ -2,11 +2,11 @@
 #'
 #' For each gene, find the subset of other genes that have strongest positive/negative Spearman's rank correlations in a normalized expression matrix.
 #'
-#' @param x A numeric matrix containing a (possibly log-transformed) normalized expression matrix for genes (rows) and cells (columns).
-#' Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.
+#' @param x,y Normalized expression matrices containing features in the rows and cells in the columns.
+#' Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
+#' \code{y} may be missing, in which correlations are computed between features in \code{x}.
 #' @param number Integer scalar specifying the number of top correlated genes to report for each gene in \code{x}.
-#' @param y Another normalized expression matrix with the same number of cells as \code{x}, possibly with different features.
-#' For the SummarizedExperiment method, this may also be a SummarizedExperiment object containing such a matrix.
+#' @param block A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.
 #' @param d Integer scalar specifying the number of dimensions to use for the approximate search via PCA.
 #' If \code{NA}, no approximation of the rank values is performed prior to the search.
 #' @param use.names Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.
@@ -57,10 +57,6 @@
 #' @name findTopCorrelations
 NULL
 
-######################
-##### Internals ######
-######################
-
 #' @importFrom BiocSingular IrlbaParam
 #' @importFrom BiocNeighbors findKNN queryKNN KmknnParam
 #' @importFrom BiocParallel SerialParam bpstart bpstop
@@ -80,7 +76,6 @@ NULL
         .find_self_top_correlations(x, number=number, d=d, deferred=deferred, equiweight=equiweight,
             block=block, direction=direction, use.names=use.names,
             BSPARAM=BSPARAM, BNPARAM=BNPARAM, BPPARAM=BPPARAM)
-
     } else {
         .find_cross_top_correlations(x, y=y, number=number, d=d, deferred=deferred, equiweight=equiweight,
             block=block, direction=direction, use.names=use.names,
@@ -88,9 +83,12 @@ NULL
     }
 }
 
+#############################
+##### Top correlations ######
+#############################
+
 #' @importFrom Matrix t
 #' @importFrom BiocNeighbors findKNN queryKNN buildIndex
-#' @importFrom DelayedArray is_sparse
 #' @importFrom beachmat rowBlockApply
 #' @importFrom DelayedMatrixStats rowAnys
 #' @importFrom S4Vectors List
@@ -102,8 +100,8 @@ NULL
         combined <- cbind(combined, -combined)
     }
 
-    stash <- .create_blocked_rank_matrix(combined, deferred=deferred, block=block, d=d, 
-        equiweight=equiweight, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
+    stash <- .create_blocked_rank_matrix(combined, deferred=deferred, 
+        block=block, d=d, equiweight=equiweight, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
     rank.out <- stash$rank.out
     search.out <- stash$search.out
     nblocks <- stash$nblocks
@@ -133,8 +131,7 @@ NULL
 
     if (direction %in% c("positive", "both")) {
         nn.out <- findKNN(BNINDEX=precomputed, k=number, BPPARAM=BPPARAM, get.distance=FALSE)
-        rho <- rowBlockApply(rank.x, FUN=.compute_exact_neighbor_rho, other=rank.x, 
-            nblocks=nblocks, indices=nn.out$index, BPPARAM=BPPARAM)
+        rho <- rowBlockApply(rank.x, FUN=.compute_exact_neighbor_rho, other=rank.x, nblocks=nblocks, indices=nn.out$index, BPPARAM=BPPARAM)
         output$positive <- do.call(.create_output_dataframe, c(list(nn.out$index, rho, positive=TRUE), args))
     }
 
@@ -148,8 +145,7 @@ NULL
         stripped <- matrix(t(nn.out$index)[t(!discard)], ncol(nn.out$index) - 1L, nrow(nn.out$index)) # transposing so we refill by column-major.
         nn.out$index <- t(stripped)
 
-        rho <- rowBlockApply(rank.x, FUN=.compute_exact_neighbor_rho, other=rank.x, 
-            nblocks=nblocks, indices=nn.out$index, BPPARAM=BPPARAM)
+        rho <- rowBlockApply(rank.x, FUN=.compute_exact_neighbor_rho, other=rank.x, nblocks=nblocks, indices=nn.out$index, BPPARAM=BPPARAM)
         output$negative <- do.call(.create_output_dataframe, c(list(nn.out$index, rho, positive=FALSE), args))
     }
 
@@ -158,7 +154,6 @@ NULL
 
 #' @importFrom Matrix t
 #' @importFrom BiocNeighbors queryKNN buildIndex
-#' @importFrom DelayedArray is_sparse
 #' @importFrom beachmat rowBlockApply
 #' @importFrom S4Vectors List
 .find_cross_top_correlations <- function(x, y, direction, number, d, block, deferred, equiweight, use.names, BSPARAM, BNPARAM, BPPARAM) {
@@ -178,8 +173,8 @@ NULL
         combined <- cbind(combined, -combined, alt, -alt)
     }
 
-    stash <- .create_blocked_rank_matrix(combined, deferred=deferred, block=block, d=d, 
-        equiweight=equiweight, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
+    stash <- .create_blocked_rank_matrix(combined, deferred=deferred, 
+        block=block, d=d, equiweight=equiweight, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
     rank.out <- stash$rank.out
     search.out <- stash$search.out
     nblocks <- stash$nblocks
@@ -216,13 +211,18 @@ NULL
     output
 }
 
+######################
+##### Internals ######
+######################
+
 #' @importFrom BiocGenerics cbind
 #' @importFrom DelayedMatrixStats colVars
 .create_blocked_rank_matrix <- function(x, deferred, block, ..., d, equiweight, BSPARAM, BPPARAM) {
     if (is.null(block)) {
+        nblocks <- nrow(x)
         rank.out <- .create_rank_matrix(x, deferred=deferred, BPPARAM=BPPARAM)
         search.out <- .compress_rank_matrix(rank.out, d=d, deferred=deferred, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
-        nblocks <- nrow(x)
+
     } else {
         # Remember, genes are columns coming into this function!
         # So we have to split by rows, as cells are in different batches.
@@ -249,34 +249,6 @@ NULL
     }
 
     list(rank.out=rank.out, search.out=search.out, nblocks=nblocks)
-}
-
-#' @importFrom Matrix colMeans t
-#' @importFrom BiocSingular DeferredMatrix
-#' @importFrom DelayedArray getAutoBPPARAM setAutoBPPARAM
-#' @importFrom scran scaledColRanks
-.create_rank_matrix <- function(x, deferred, ..., BPPARAM) {
-    if (!deferred) {
-        scaledColRanks(x, ..., transposed=TRUE)
-    } else {
-        old <- getAutoBPPARAM()
-        setAutoBPPARAM(BPPARAM)
-        on.exit(setAutoBPPARAM(old))
-
-        y <- scaledColRanks(x, ..., transposed=FALSE, as.sparse=TRUE, BPPARAM=BPPARAM)
-        y <- DeferredMatrix(y, center=colMeans(y))
-        t(y)
-    }
-}
-
-#' @importFrom BiocSingular runPCA
-.compress_rank_matrix <- function(rank.x, d, deferred, BSPARAM, BPPARAM) {
-    if (!is.na(d)) {
-        BSPARAM@deferred <- deferred # TODO: add easier setters.
-        runPCA(rank.x, rank=d, get.rotation=FALSE, BSPARAM=BSPARAM, BPPARAM=BPPARAM)$x
-    } else {
-        as.matrix(rank.x)
-    }
 }
 
 #' @importFrom DelayedArray currentViewport makeNindexFromArrayViewport
@@ -307,47 +279,46 @@ NULL
     output
 }
 
+#' @importFrom Matrix colMeans t
+#' @importFrom BiocSingular DeferredMatrix
+#' @importFrom DelayedArray getAutoBPPARAM setAutoBPPARAM
+#' @importFrom scran scaledColRanks
+.create_rank_matrix <- function(x, deferred, ..., BPPARAM) {
+    if (!deferred) {
+        scaledColRanks(x, ..., transposed=TRUE)
+    } else {
+        old <- getAutoBPPARAM()
+        setAutoBPPARAM(BPPARAM)
+        on.exit(setAutoBPPARAM(old))
+
+        y <- scaledColRanks(x, ..., transposed=FALSE, as.sparse=TRUE, BPPARAM=BPPARAM)
+        y <- DeferredMatrix(y, center=colMeans(y))
+        t(y)
+    }
+}
+
+#' @importFrom BiocSingular runPCA
+.compress_rank_matrix <- function(rank.x, d, deferred, BSPARAM, BPPARAM) {
+    if (!is.na(d)) {
+        BSPARAM@deferred <- deferred # TODO: add easier setters.
+        runPCA(rank.x, rank=d, get.rotation=FALSE, BSPARAM=BSPARAM, BPPARAM=BPPARAM)$x
+    } else {
+        as.matrix(rank.x)
+    }
+}
+
 #' @importFrom stats p.adjust
 #' @importFrom metapod parallelStouffer
-#' @importFrom S4Vectors DataFrame
 .create_output_dataframe <- function(indices, rho, nblocks, equiweight, use.names, names1, names2, ntests, positive) {
     rho <- do.call(mapply, c(list(FUN=rbind, SIMPLIFY=FALSE), rho)) # still fragmented from the blockApply.
-
-    if (length(nblocks)==1L) {
-        mean.rho <- rho[[1]]
-    } else if (equiweight) {
-        mean.rho <- Reduce("+", rho)/length(rho)
-    } else {
-        mean.rho <- mapply("*", rho, nblocks, SIMPLIFY=FALSE)
-        mean.rho <- Reduce("+", mean.rho)/sum(nblocks)
-    }
+    mean.rho <- .compute_mean_rho(rho, nblocks, equiweight)
 
     self <- rep(seq_len(nrow(indices)), ncol(indices))
     df <- DataFrame(gene1=self, gene2=as.vector(indices), rho=as.vector(mean.rho))
+    df <- .fill_names(df, use.names, names1, names2)
 
-    # Assembling the DF.
-    if (use.names) {
-        if (!is.null(names1)) {
-            df$gene1 <- names1[df$gene1]
-        }
-        if (!is.null(names2)) {
-            df$gene2 <- names2[df$gene2]
-        } 
-    }
-
-    # Mildly adapted from cor.test.
-    p.values <- vector("list", length(rho))
-    for (i in seq_along(rho)) {
-        ncells <- nblocks[i]
-        cur.rho <- as.vector(rho[[i]])
-
-        q <- (ncells^3 - ncells) * (1 - cur.rho)/6
-        den <- (ncells * (ncells^2 - 1)/6)
-        r <- 1 - q/den
-        tstat <- r/sqrt((1 - r^2)/(ncells - 2))
-
-        p.values[[i]] <- pt(tstat, df = ncells - 2, lower.tail = !positive)
-    }
+    p.values <- mapply(FUN=.compute_cor_p, rho=rho, ncells=nblocks, 
+        MoreArgs=list(positive=positive), SIMPLIFY=FALSE)
 
     if (length(nblocks)==1L) {
         p.value <- p.values[[1]]
