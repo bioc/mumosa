@@ -107,7 +107,7 @@ setMethod("calculateMultiUMAP", "ANY", function(x, ..., metric="euclidean") {
 #' @rdname runMultiUMAP
 setMethod("calculateMultiUMAP", "SummarizedExperiment", function(x, assays, extras=list(), ...) {
     targets <- .collate_se_matrices(x, assays)
-    callNextMethod(c(targets, extras), ..., metric=metric)
+    callNextMethod(c(targets, extras), ...)
 }) 
 
 #' @export
