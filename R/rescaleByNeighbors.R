@@ -1,6 +1,6 @@
 #' Rescale matrices for different modes
 #'
-#' Rescale matrices for different data modalities so that their distances are more comparable.
+#' Rescale matrices for different data modalities so that their distances are more comparable, using the distances to neighbors to approximate noise.
 #'
 #' @param x A list of numeric matrices where each row is a cell and each column is some dimension/variable.
 #' For gene expression data, this is usually the matrix of PC coordinates.
@@ -9,8 +9,9 @@
 #' Alternatively, a \linkS4class{SummarizedExperiment} containing relevant matrices in its assays.
 #'
 #' Alternatively, a \linkS4class{SingleCellExperiment} containing relevant matrices in its assays, \code{\link{reducedDims}} or \code{\link{altExps}}.
-#' @param weights A numeric vector of length equal to \code{x}, specifying the weight of each mode.
+#' @param weights A numeric vector of length equal to \code{x} (if a list), specifying the weight of each mode.
 #' Defaults to equal weights for all modes.
+#' See details for how to interpret this argument when \code{x} is a SummarizedExperiment.
 #' @param combine A logical scalar specifying whether the rescaled matrices should be combined into a single matrix. 
 #' @inheritParams runMultiUMAP
 #' @param assays A character or integer vector of assays to extract and transpose for use in the ANY method.
@@ -54,6 +55,11 @@
 #' However, we can also set \code{weights} to control the fold-differences in the median distances.
 #' For example, a weight of 2 for one mode would mean that its median distance after rescaling is twice as large as that from a mode with a weight of 1. 
 #' This may be useful for prioritizing modes that are more likely to be important.
+#' 
+#' The correspondence between non-\code{NULL} \code{weights} and the modes is slightly tricky whe \code{x} is not a list.
+#' If \code{x} is a SummarizedExperiment, the modes are ordered as: all entries in \code{assays} in the specified order, then all entries in \code{extras}.
+#' If \code{x} is a SingleCellExperiment, the modes are ordered as: all entries in \code{assays} in the specified order, 
+#' then all entries in \code{dimreds}, then all entries in \code{altexps}, and finally all entries in \code{extras}.
 #'
 #' @examples
 #' # Mocking up a gene expression + ADT dataset:
@@ -66,11 +72,11 @@
 #' adt_sce <- logNormCounts(adt_sce)
 #' altExp(exprs_sce, "ADT") <- adt_sce
 #'
-#' combined <- rescaleModalMatrices(exprs_sce, dimreds="PCA", altexps="ADT")
+#' combined <- rescaleByNeighbors(exprs_sce, dimreds="PCA", altexps="ADT")
 #' dim(combined)
 #' 
 #' @author Aaron Lun
-#' @name rescaleModalMatrices
+#' @name rescaleByNeighbors
 NULL
 
 #' @importFrom stats median
@@ -94,7 +100,7 @@ NULL
     weights <- rep(weights, length.out=length(x))
 
     for (i in seq_along(x)) {
-        nn <- findKNN(x[[i]], k=k, BNPARAM=BNPARAM, BPPARAM=BPPARAM, get.index=FALSE, last=1)$distance
+        nn <- findKNN(x[[i]], k=k, BNPARAM=BNPARAM, BPPARAM=BPPARAM, get.index=FALSE, warn.ties=FALSE, last=1)$distance
         nn <- median(nn)/weights[i]
         x[[i]] <- x[[i]]/max(nn, 1e-8)
     }
@@ -107,23 +113,23 @@ NULL
 }
 
 #' @export
-#' @rdname rescaleModalMatrices
-setGeneric("rescaleModalMatrices", function(x, ...) standardGeneric("rescaleModalMatrices"))
+#' @rdname rescaleByNeighbors
+setGeneric("rescaleByNeighbors", function(x, ...) standardGeneric("rescaleByNeighbors"))
 
 #' @export
-#' @rdname rescaleModalMatrices
-setMethod("rescaleModalMatrices", "ANY", .rescale_modal_matrices)
+#' @rdname rescaleByNeighbors
+setMethod("rescaleByNeighbors", "ANY", .rescale_modal_matrices)
 
 #' @export
-#' @rdname rescaleModalMatrices
-setMethod("rescaleModalMatrices", "SummarizedExperiment", function(x, assays, extras=list(), ...) {
+#' @rdname rescaleByNeighbors
+setMethod("rescaleByNeighbors", "SummarizedExperiment", function(x, assays, extras=list(), ...) {
     targets <- .collate_se_matrices(x, assays)
-    callNextMethod(c(targets, extras), ...)
+    .rescale_modal_matrices(c(targets, extras), ...)
 })
 
 #' @export
-#' @rdname rescaleModalMatrices
-setMethod("rescaleModalMatrices", "SingleCellExperiment", 
+#' @rdname rescaleByNeighbors
+setMethod("rescaleByNeighbors", "SingleCellExperiment", 
     function(x, assays=NULL, dimreds=NULL, altexps=NULL, altexp.assay="logcounts", extras=list(), ...) 
 {
     targets <- .collate_sce_matrices(x, dimreds=dimreds, altexps=altexps, altexp.assay=altexp.assay)
