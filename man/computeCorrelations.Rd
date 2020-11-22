@@ -21,11 +21,17 @@ computeCorrelations(x, y, ...)
 }
 \arguments{
 \item{x}{Normalized expression matrices containing features in the rows and cells in the columns.
+Each matrix should have the same set of columns but a different set of features, usually corresponding to different modes for the same cells.
+
 Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
+
 \code{y} may be missing, in which correlations are computed between features in \code{x}.}
 
 \item{y}{Normalized expression matrices containing features in the rows and cells in the columns.
+Each matrix should have the same set of columns but a different set of features, usually corresponding to different modes for the same cells.
+
 Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
+
 \code{y} may be missing, in which correlations are computed between features in \code{x}.}
 
 \item{...}{For the generic, further arguments to pass to specific methods.
@@ -55,7 +61,7 @@ This is another feature in \code{x} if \code{y=NULL}, otherwise it is a feature 
 The rows are sorted by \code{feature1} and then \code{p.value}.
 }
 \description{
-Compute Spearman correlations between two sets of features, using data collected for the same cells.
+Compute Spearman correlations between two sets of features, using data collected for the same cells in different modalities.
 }
 \details{
 If \code{block} is specified, correlations are computed separately for each block of cells.

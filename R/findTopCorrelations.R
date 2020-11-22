@@ -1,9 +1,12 @@
 #' Find top correlations between features
 #'
-#' For each feature, find the subset of other features that have strongest positive/negative Spearman's rank correlations in a pair of normalized expression matrices.
+#' For each feature, find the subset of other features in the same or another modality that have strongest positive/negative Spearman's rank correlations in a pair of normalized expression matrices.
 #'
 #' @param x,y Normalized expression matrices containing features in the rows and cells in the columns.
+#' Each matrix should have the same set of columns but a different set of features, usually corresponding to different modes for the same cells.
+#' 
 #' Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
+#'
 #' \code{y} may be missing, in which correlations are computed between features in \code{x}.
 #' @param number Integer scalar specifying the number of top correlated features to report for each feature in \code{x}.
 #' @param block A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.

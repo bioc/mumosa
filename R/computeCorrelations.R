@@ -1,6 +1,6 @@
 #' Compute correlations between modes
 #'
-#' Compute Spearman correlations between two sets of features, using data collected for the same cells.
+#' Compute Spearman correlations between two sets of features, using data collected for the same cells in different modalities.
 #'
 #' @inheritParams findTopCorrelations
 #'
