@@ -1,11 +1,11 @@
-#' Find top correlations between genes
+#' Find top correlations between features
 #'
-#' For each gene, find the subset of other genes that have strongest positive/negative Spearman's rank correlations in a normalized expression matrix.
+#' For each feature, find the subset of other features that have strongest positive/negative Spearman's rank correlations in a pair of normalized expression matrices.
 #'
 #' @param x,y Normalized expression matrices containing features in the rows and cells in the columns.
 #' Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
 #' \code{y} may be missing, in which correlations are computed between features in \code{x}.
-#' @param number Integer scalar specifying the number of top correlated genes to report for each gene in \code{x}.
+#' @param number Integer scalar specifying the number of top correlated features to report for each feature in \code{x}.
 #' @param block A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.
 #' @param d Integer scalar specifying the number of dimensions to use for the approximate search via PCA.
 #' If \code{NA}, no approximation of the rank values is performed prior to the search.
@@ -23,36 +23,48 @@
 #' These are named \code{"positive"} and \code{"negative"}, and are generated according to \code{direction};
 #' if \code{direction="both"}, both DataFrames will be present.
 #'
-#' Each DataFrame has up to \code{nrow(x) * number} rows, containing the top \code{number} correlated genes for each gene in \code{x}.
+#' Each DataFrame has up to \code{nrow(x) * number} rows, containing the top \code{number} correlated features for each feature in \code{x}.
 #' This contains the following fields:
 #' \itemize{
-#' \item \code{gene1}, the name (character) or row index (integer) of each gene in \code{x}.
-#' \item \code{gene2}, the name (character) or row index (integer) of one of the top correlated genes to \code{gene1}.
-#' This is another gene in \code{x} if \code{y=NULL}, otherwise it is a gene in \code{y}.
-#' \item \code{rho}, the Spearman rank correlation for the current pair of \code{gene1} and \code{gene2}.
+#' \item \code{feature1}, the name (character) or row index (integer) of each feature in \code{x}.
+#' \item \code{feature2}, the name (character) or row index (integer) of one of the top correlated features to \code{feature1}.
+#' This is another feature in \code{x} if \code{y=NULL}, otherwise it is a feature in \code{y}.
+#' \item \code{rho}, the Spearman rank correlation for the current pair of \code{feature1} and \code{feature2}.
 #' \item \code{p.value}, the approximate p-value associated with \code{rho} under the null hypothesis that the correlation is zero.
 #' \item \code{FDR}, the adjusted p-value.
 #' }
-#' The rows are sorted by \code{gene1} and then \code{p.value}.
+#' The rows are sorted by \code{feature1} and then \code{p.value}.
 #' 
 #' @details
-#' In most cases, we only care about the top-correlated genes, allowing us to skip a lot of unnecessary computation.
+#' In most cases, we only care about the top-correlated features, allowing us to skip a lot of unnecessary computation.
 #' This is achieved by transforming the problem of finding the largest Spearman correlation into a nearest-neighbor search in rank space.
-#' For the sake of speed, we approximate the search by performing PCA to compress the rank values for all genes.
+#' For the sake of speed, we approximate the search by performing PCA to compress the rank values for all features.
 #'
-#' We compute the p-value for each gene using the approximate method implemented in \code{\link{cor.test}}.
-#' The FDR correction is performed by considering all possible pairs of genes, as these are implicitly tested in the neighbor search.
-#' Note that this is somewhat conservative as it does not consider strong correlations outside the reported genes.
+#' For each direction, we compute the one-sided p-value for each feature using the approximate method implemented in \code{\link{cor.test}}.
+#' The FDR correction is performed by considering all possible pairs of features, as these are implicitly tested in the neighbor search.
+#' Note that this is somewhat conservative as it does not consider strong correlations outside the reported features.
+#'
+#' If \code{block} is specified, correlations are computed separately for each block of cells.
+#' For each feature pair, the reported \code{rho} is set to the average of the correlations across all blocks.
+#' Similarly, the p-value corresponding to each correlation is computed separately for each block and then combined across blocks with Stouffer's method.
+#' If \code{equiweight=FALSE}, the average correlation and each per-block p-value is weighted by the number of cells.
 #'
 #' @author Aaron Lun
 #'
 #' @examples
 #' library(scuttle)
-#' sce <- mockSCE()
-#' sce <- logNormCounts(sce)
+#' sce1 <- mockSCE()
+#' sce1 <- logNormCounts(sce1)
 #'
-#' df <- findTopCorrelations(sce, number=20) # top 20 correlated genes for each gene.
+#' sce2 <- mockSCE(ngenes=20) # pretend this is CITE-seq data, or something.
+#' sce2 <- logNormCounts(sce2)
+#'
+#' # top 20 correlated features in 'sce2' for each feature in 'sce1':
+#' df <- findtopcorrelations(sce, sce2, number=20) 
+#' df
 #' 
+#' @seealso
+#' \code{\link{computeCorrelations}}, to compute correlations for all pairs of features.
 #' 
 #' @name findTopCorrelations
 NULL
@@ -224,7 +236,7 @@ NULL
         search.out <- .compress_rank_matrix(rank.out, d=d, deferred=deferred, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
 
     } else {
-        # Remember, genes are columns coming into this function!
+        # Remember, features are columns coming into this function!
         # So we have to split by rows, as cells are in different batches.
         by.block <- split(seq_len(nrow(x)), block)
         rank.out <- search.out <- vector("list", length(by.block))
@@ -314,7 +326,7 @@ NULL
     mean.rho <- .compute_mean_rho(rho, nblocks, equiweight)
 
     self <- rep(seq_len(nrow(indices)), ncol(indices))
-    df <- DataFrame(gene1=self, gene2=as.vector(indices), rho=as.vector(mean.rho))
+    df <- DataFrame(feature1=self, feature2=as.vector(indices), rho=as.vector(mean.rho))
     df <- .fill_names(df, use.names, names1, names2)
 
     p.values <- mapply(FUN=.compute_cor_p, rho=rho, ncells=nblocks, 
@@ -332,10 +344,10 @@ NULL
         p.value <- parallelStouffer(p.values, weights=weights)$p.value
     }
 
-    df$p.value <- p.value
+    df$p.value <- as.vector(p.value)
     df$FDR <- p.adjust(df$p.value, method="BH", n = ntests)
 
-    o <- order(df$gene1, df$p.value)
+    o <- order(df$feature1, df$p.value)
     df[o,,drop=FALSE]
 }
 

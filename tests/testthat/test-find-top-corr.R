@@ -1,5 +1,5 @@
 # This tests the findTopCorrelations function.
-# library(testthat); library(mumosa); source("test-find-top-corr.R")
+# library(testthat); library(mumosa); source("setup.R"); source("test-find-top-corr.R")
 
 set.seed(109109100)
 test_that("findTopCorrelations works for the top self-correlations", {
@@ -27,9 +27,9 @@ test_that("findTopCorrelations works for the top self-correlations", {
         collected.worst.cor[[i]] <- all.cor[i,my.worst]
     }
 
-    expect_identical(df$positive$gene2, unlist(collected.best))
+    expect_identical(df$positive$feature2, unlist(collected.best))
     expect_equal(df$positive$rho, unname(unlist(collected.best.cor)))
-    expect_identical(df$negative$gene2, unlist(collected.worst))
+    expect_identical(df$negative$feature2, unlist(collected.worst))
     expect_equal(df$negative$rho, unname(unlist(collected.worst.cor)))
 
     # Expect the same results from one setting of direction.
@@ -46,8 +46,8 @@ test_that("findTopCorrelations p-value is correctly computed", {
 
     up.p <- down.p <- numeric(nrow(df$positive))
     for (x in seq_len(nrow(df$positive))) {
-        up.p[x] <- cor.test(mat[x,], mat[df$positive$gene2[x],], method="spearman", alternative="greater", exact=FALSE)$p.value
-        down.p[x] <- cor.test(mat[x,], mat[df$negative$gene2[x],], method="spearman", alternative="less", exact=FALSE)$p.value
+        up.p[x] <- cor.test(mat[x,], mat[df$positive$feature2[x],], method="spearman", alternative="greater", exact=FALSE)$p.value
+        down.p[x] <- cor.test(mat[x,], mat[df$negative$feature2[x],], method="spearman", alternative="less", exact=FALSE)$p.value
     }
 
     expect_equal(up.p, df$positive$p.value)
@@ -63,7 +63,7 @@ test_that("findTopCorrelations correctly excludes self from negative correlation
 
     expect_identical(nrow(df$positive), nrow(mat) * (nrow(mat)  - 1L))
     expect_identical(nrow(df$positive), nrow(df$negative))
-    expect_true(all(df$negative$gene1!=df$negative$gene2))
+    expect_true(all(df$negative$feature1!=df$negative$feature2))
 })
 
 set.seed(109109101)
@@ -110,9 +110,9 @@ test_that("findTopCorrelations works for the top cross-correlations", {
         collected.worst.cor[[i]] <- all.cor[i,my.worst]
     }
 
-    expect_identical(df$positive$gene2, unlist(collected.best))
+    expect_identical(df$positive$feature2, unlist(collected.best))
     expect_equal(df$positive$rho, unname(unlist(collected.best.cor)))
-    expect_identical(df$negative$gene2, unlist(collected.worst))
+    expect_identical(df$negative$feature2, unlist(collected.worst))
     expect_equal(df$negative$rho, unname(unlist(collected.worst.cor)))
 
     # Expect the same results from one setting of direction.
@@ -203,4 +203,21 @@ test_that("findTopCorrelations works with blocked cross-correlations", {
     weight <- findTopCorrelations(sce1, y=sce2, number=20, d=NA, block=block0, BSPARAM=BiocSingular::ExactParam())
     noweight <- findTopCorrelations(sce1, y=sce2, number=20, d=NA, block=block0, equiweight=FALSE, BSPARAM=BiocSingular::ExactParam())
     expect_false(isTRUE(all.equal(weight, noweight)))
+})
+
+set.seed(10004)
+test_that("computeCorrelations handles the looping correctly", {
+    sce1 <- mockSCE(ngenes=20)
+    sce1 <- logNormCounts(sce1)
+    sce2 <- mockSCE(ngenes=25)
+    sce2 <- logNormCounts(sce1)
+
+    ref1 <- computeCorrelations(sce1)
+    ref2 <- computeCorrelations(sce1, sce2)
+
+    out1 <- computeCorrelations(sce1, BPPARAM=safeBPParam(2))
+    out2 <- computeCorrelations(sce1, sce2, BPPARAM=safeBPParam(2))
+
+    expect_identical(out1, ref1)
+    expect_identical(out2, ref2)
 })
