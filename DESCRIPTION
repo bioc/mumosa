@@ -16,6 +16,7 @@ Imports:
     Matrix,
     BiocGenerics,
     S4Vectors,
+    DelayedArray,
     SummarizedExperiment,
     BiocNeighbors,
     scuttle,
