@@ -97,9 +97,21 @@ unsplitAltExps <- function(sce, prefix.rows=TRUE, prefix.cols=TRUE) {
         cur.se <- all.se[[s]]
         if (is(cur.se, "RangedSummarizedExperiment")) {
             final.rd[[s]] <- rowRanges(cur.se)
-        } else {
-            final.rd[[s]] <- GRanges(rep("unknown:1-0", nrow(cur.se)))
         }
+    }
+
+    # Filling in the empties. We promote everyone to a GRL if any of the individuals are GRLs.
+    has.grl <- any(vapply(final.rd, FUN=is, class2="GRangesList", FUN.VALUE=TRUE))
+    for (e in which(vapply(final.rd, is.null, FUN.VALUE=TRUE))) {
+        cur.se <- all.se[[e]]
+        if (has.grl) {
+            empty <- GRangesList(rep(list(GRanges()), nrow(cur.se)))
+        } else {
+            empty <- GRanges(rep("unknown:1-0", nrow(cur.se)))
+        }
+        mcols(empty) <- rowData(cur.se)
+        names(empty) <- rownames(cur.se)
+        final.rd[[e]] <- empty
     }
 
     output <- NULL
@@ -134,6 +146,7 @@ unsplitAltExps <- function(sce, prefix.rows=TRUE, prefix.cols=TRUE) {
 #' @importFrom SummarizedExperiment colData
 .combine_coldata <- function(all.se, prefix) {
     final.cd <- lapply(all.se, colData)
+    final.cd <- unname(final.cd)
     if (prefix) {
         for (i in seq_along(all.se)[-1]) {
             colnames(final.cd[[i]]) <- sprintf("%s.%s", names(all.se)[i], colnames(final.cd[[i]]))
@@ -144,7 +157,14 @@ unsplitAltExps <- function(sce, prefix.rows=TRUE, prefix.cols=TRUE) {
 
 #' @importFrom SingleCellExperiment reducedDims
 .combine_reddims <- function(all.se, prefix) {
-    final.rd <- lapply(all.se, reducedDims)
+    final.rd <- lapply(all.se, function(x) {
+        if (is(x, "SingleCellExperiment")) {
+            reducedDims(x)
+        } else {
+            list()
+        }
+    })
+
     if (prefix) {
         for (i in seq_along(all.se)[-1]) {
             names(final.rd[[i]]) <- sprintf("%s.%s", names(all.se)[i], names(final.rd[[i]]))
