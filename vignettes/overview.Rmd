@@ -1,0 +1,211 @@
+---
+title: Utilities for multi-modal single-cell analyses 
+author: 
+- name: Aaron Lun
+  email: infinite.monkeys.with.keyboards@gmail.com
+date: "Revised: 8 November 2020"
+output:
+  BiocStyle::html_document:
+    toc_float: true
+package: mumosa 
+vignette: >
+  %\VignetteIndexEntry{Overview}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}    
+---
+
+```{r, echo=FALSE, results="hide", message=FALSE}
+require(knitr)
+opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+library(BiocStyle)
+```
+
+# Overview
+
+The `r Biocpkg("mumosa")` package implements a variety of utilities for analyses of single-cell data with multiple modalities.
+This usually refers to single-cell RNA-seq experiments with proteomics, epigenomics or other data collected from the same cells.
+The aim is to investigate how different modalities relate to each other via analyses of correlations,
+and to combine data together from multiple modalities for integrated downstream analyses.
+The actual analyses of each individual modality are deferred to other packages;
+the scope of `r Biocpkg("mumosa")` is limited to the sharing of information across modalities.
+
+# Setting up the data
+
+To demonstrate the functionalities of this package, we will use a subset of a CITE-seq experiment from the `r Biocpkg("scRNAseq")` package.
+The main Experiment contains the RNA-seq counts while the `adt` alternative Experiment contains the CITE-seq counts -
+see the `r Biocpkg("SingleCellExperiment")` package documentation for more details.
+
+```{r}
+library(scater)
+library(scran)
+library(scRNAseq)
+sce <- KotliarovPBMCData()
+sce <- sce[,1:1000] # subset for speed.
+sce
+```
+
+We perform some cursory analyses on the RNA component:
+
+```{r}
+stats <- perCellQCMetrics(sce, list(Mito=grep("^MT-", rownames(sce)))
+filter <- quickPerCellQC(stats, sub.fields="subsets_Mito_percent")
+sce <- sce[,!filter$discard]
+sce <- logNormCounts(sce)
+dec <- modelGeneVar(sce)
+set.seed(10000)
+sce <- runPCA(sce, ncomponents=25, subset_row=getTopHVGs(dec, n=5000))
+```
+
+And again on the protein component.
+
+```{r}
+sceA <- altExp(sce)
+statsA <- perCellQCMetrics(sceA)
+keep <- statsA$detected > 50 
+sceA <- sceA[,keep]
+
+library(DropletUtils)
+amb <- inferAmbience(assay(sceA))
+sceA <- computeMedianFactors(sceA, reference=amb)
+sceA <- logNormCounts(sceA)
+
+set.seed(10000)
+sceA <- runPCA(sceA, ncomponents=15)
+```
+
+Putting everything back into the same object again, onyl considering the cells passing QC in both modalities.
+
+```{r}
+sce2 <- sce[,keep]
+altExp(sce2) <- sceA
+```
+
+# Combining multi-modal data
+
+## Using rescaling matrices
+
+The easiest way to combine data for the same set of cells is to simply `cbind` their matrices together prior to downstream analyses like clustering.
+However, this requires some rescaling to adjust for the differences in the number of features and variation of each modality;
+otherwise, the modality with more features or stronger (technical) variation would just dominate later calculations.
+`rescaleByNeighbors()` quantifies the "noise" of each modality using on the median distance to the $k$-th nearest neighbor,
+and then rescales each expression/PC matrix by that distance to equalize the noise across modalities.
+
+```{r}
+library(mumosa)
+output <- rescaleByNeighbors(list(reducedDim(sce2), reducedDim(altExp(sce2))))
+dim(output)
+```
+
+The result is a `cbind`ed matrix that can be used directly in downstream analyses like clustering and dimensionality reduction.
+
+```{r}
+set.seed(100001)
+library(bluster)
+sce2$combined.clustering <- clusterRows(output, NNGraphParam())
+
+reducedDim(sce2, "combined") <- output
+sce2 <- runTSNE(sce2, dimred="combined")
+plotTSNE(sce2, colour_by="combined.clustering")
+```
+
+Advanced users can also adjust the weight given to each modality via the `weights=` argument;
+a modality assigned a weight of 2 will mean that the rescaled distance is twice that of a modality with a weight of 1.
+
+## Using UMAP
+
+Another approach is to take advantage of UMAP's ability to combine information on different scales.
+This is achieved by - roughly speaking - creating nearest-neighbor graphs within each modality,
+and then "intersecting" the graphs such that cells are only considered to be neighbors if they are neighbors in each modality.
+In this manner, we incorporate locality information from all modes without explicitly comparing distances across modes.
+We apply this strategy using the `calculateMultiUMAP()` function,
+increasing the number of components to avoid loss of information.
+
+```{r}
+set.seed(100002)
+umap.out <- calculateMultiUMAP(list(reducedDim(sce2), reducedDim(altExp(sce2))), 
+    n_components=20)
+dim(umap.out)
+```
+
+Again, we can use this in downstream analyses like clustering:
+
+```{r}
+library(bluster)
+sce2$umap.clustering <- clusterRows(umap.out, NNGraphParam())
+```
+
+And also visualization, though perhaps it is more natural to just compute the UMAP on two dimensions for this purpose.
+`runMultiMap()` is just a wrapper around `calculateMultiUMAP()` that conveniently stores the output in the `reducedDims` of the input `SingleCellExperiment`.
+
+```{r}
+set.seed(100002)
+sce2 <- runMultiUMAP(sce2, dimred="PCA", extras=list(reducedDim(altExp(sce2))))
+plotReducedDim(sce2, "MultiUMAP", colour_by="umap.clustering")
+```
+
+# Correlation analyses
+
+## Across all pairs
+
+Given two modalities, we may be interested in knowing which features in one modality are correlated to the features in another modality.
+The `computeCorrelations()` function does exactly this:
+
+```{r}
+cor.all <- computeCorrelations(sce2, altExp(sce2)[1:5,])
+cor.all[order(cor.all$p.value),]
+```
+
+For multi-batch experiments, we can specify blocking factors to avoid being confounded by the batch effect.
+Each batch receives equal weight when averaging correlations and in computing the final combined $p$-value.
+
+```{r}
+b <- rep(1:3, length.out=ncol(sce2))
+cor.all.batch <- computeCorrelations(sce2, altExp(sce2)[1:5,], block=b)
+```
+
+However, this approach can be very slow when dealing with large numbers of features;
+indeed, one may note the subsetting to the first 5 features in the code above.
+Users can enable parallelization via `BPPARAM=` to speed up the process but this will only go so far.
+
+## Top correlations only
+
+An alternative approach is to, for each feature in one modality, perform an approximate search for the top most-correlated features in another modality.
+This assumes that only the strongest correlations (positive or negative) are of actual interest, while the bulk of weak correlations can be ignored.
+We use the `findTopCorrelations()` function with a specified number of top features to extract: 
+
+```{r}
+set.seed(100001) # for IRLBA.
+top.cor <- findTopCorrelations(sce2[1:100,], y=altExp(sce2), number=10)
+top.cor
+```
+
+This returns the top 10 features in the CITE-seq data (`y`) for each feature in the main RNA-seq data.
+The search is approximate so some features may not be ranked as highly as they would be under an exact search -
+the approximation quality can be modified by increasing the number of PCs (`d`) used for data compression.
+This provides a quick-and-dirty approach to identifying correlations between modalities.
+
+# Reassembling a `SingleCellExperiment`
+
+Some downstream applications (particularly for visualization, e.g., `r Biocpkg("iSEE")`) only accept one `SingleCellExperiment` object.
+To make them aware of multimodal data, we might consider `rbind`ing all of the alternative Experiments to expose their features in the main Experiment.
+This is facilitated by the `unsplitAltExps()` function:
+
+```{r}
+unsplit <- unsplitAltExps(sce2)
+tail(rownames(unsplit))
+reducedDimNames(unsplit)
+```
+
+It is probably unwise to do any serious analysis on the unsplit `SingleCellExperiment`;
+few procedures come to mind that would consider features from different modalities to be interchangeable.
+However, the unsplit object is quite convenient for visualization as we can just refer to features from other modalities by their (prefixed) name:
+
+```{r}
+plotExpression(unsplit, "CD79A", x="adt.BTLA_PROT", show_smooth=TRUE)
+```
+
+# Session information {-}
+
+```{r}
+sessionInfo()
+```
