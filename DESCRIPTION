@@ -6,7 +6,10 @@ Date: 2020-11-09
 License: GPL-3
 Title: Multi-Modal Single-Cell Analysis Methods
 Description: 
-    A collection of tools for multi-modal analyses of single-cell RNA-seq data.
+    Assorted utilities for multi-modal analyses of single-cell datasets.
+    Includes functions to combine multiple modes for downstream analysis,
+    combine alternative experiments into a single object for visualization, 
+    and to compute correlations between assay values for different modes.
 Depends: 
     SingleCellExperiment
 Imports: 
