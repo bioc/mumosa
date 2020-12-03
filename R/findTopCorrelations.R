@@ -104,11 +104,12 @@ NULL
     self.search <- is.null(y)
 
     # Wrapping in DA's to avoid actually subsetting the matrices unnecessarily.
-    x <- DelayedArray(x)
+    # Waiting for Bioconductor/DelayedArray#80.
+    # x <- DelayedArray(x)
     if (self.search) {
         y <- x
     } else {
-        y <- DelayedArray(y)
+    #    y <- DelayedArray(y)
     }
 
     xcat <- .find_block_availability(x, block=block, BPPARAM=BPPARAM)

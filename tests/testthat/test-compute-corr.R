@@ -63,9 +63,9 @@ test_that("computeCorrelations works correctly with blocking", {
     out <- computeCorrelations(sce1[,expanded], y=sce2[,expanded], block=block[expanded])
 
     ref <- ref[,1:3]
-    ref <- ref[do.call(order, ref),]
+    ref <- ref[do.call(order, as.list(ref)),]
     out <- out[,1:3]
-    out <- out[do.call(order, out),]
+    out <- out[do.call(order, as.list(out)),]
     expect_equal(ref, out)
 
     # Same results without equiweighting, for balanced blocks.

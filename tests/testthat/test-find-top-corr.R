@@ -141,13 +141,13 @@ test_that("findTopCorrelations works with blocked self-correlations", {
     out <- findTopCorrelations(sce[,expanded], number=20, d=10, block=block[expanded], BSPARAM=BiocSingular::ExactParam()) 
 
     ref$positive <- ref$positive[,1:3]
-    ref$positive <- ref$positive[do.call(order, ref$positive),]
+    ref$positive <- ref$positive[do.call(order, as.list(ref$positive)),]
     out$positive <- out$positive[,1:3]
-    out$positive <- out$positive[do.call(order, out$positive),]
+    out$positive <- out$positive[do.call(order, as.list(out$positive)),]
     ref$negative <- ref$negative[,1:3]
-    ref$negative <- ref$negative[do.call(order, ref$negative),]
+    ref$negative <- ref$negative[do.call(order, as.list(ref$negative)),]
     out$negative <- out$negative[,1:3]
-    out$negative <- out$negative[do.call(order, out$negative),]
+    out$negative <- out$negative[do.call(order, as.list(out$negative)),]
     expect_equal(ref, out)
 
     # Same results without equiweighting, for balanced blocks.
@@ -183,13 +183,13 @@ test_that("findTopCorrelations works with blocked cross-correlations", {
         block=block[expanded], BSPARAM=BiocSingular::ExactParam()) 
 
     ref$positive <- ref$positive[,1:3]
-    ref$positive <- ref$positive[do.call(order, ref$positive),]
+    ref$positive <- ref$positive[do.call(order, as.list(ref$positive)),]
     out$positive <- out$positive[,1:3]
-    out$positive <- out$positive[do.call(order, out$positive),]
+    out$positive <- out$positive[do.call(order, as.list(out$positive)),]
     ref$negative <- ref$negative[,1:3]
-    ref$negative <- ref$negative[do.call(order, ref$negative),]
+    ref$negative <- ref$negative[do.call(order, as.list(ref$negative)),]
     out$negative <- out$negative[,1:3]
-    out$negative <- out$negative[do.call(order, out$negative),]
+    out$negative <- out$negative[do.call(order, as.list(out$negative)),]
     expect_equal(ref, out)
 
     # Same results without equiweighting, for balanced blocks.
@@ -247,10 +247,10 @@ test_that("findTopCorrelations (self) works with blocked zero-variance genes", {
 
     refp <- rbind(ref1$positive, ref2$positive, refo$positive, ref1o$positive, refo1$positive, ref2o$positive, refo2$positive)
     refp <- refp[order(refp$feature1, refp$p.value),]
-    refp <- unlist(heads(split(refp, refp$feature1), 20), use.names=FALSE)
+    refp <- unlist(heads(S4Vectors::split(refp, refp$feature1), 20), use.names=FALSE)
     refn <- rbind(ref1$negative, ref2$negative, refo$negative, ref1o$negative, refo1$negative, ref2o$negative, refo2$negative)
     refn <- refn[order(refn$feature1, refn$p.value),]
-    refn <- unlist(heads(split(refn, refn$feature1), 20), use.names=FALSE)
+    refn <- unlist(heads(S4Vectors::split(refn, refn$feature1), 20), use.names=FALSE)
 
     out <- suppressWarnings(findTopCorrelations(vals1, number=20, d=10, block=block, BSPARAM=BiocSingular::ExactParam()))
     expect_identical(out$positive[,1:4], refp[,1:4])
@@ -281,10 +281,10 @@ test_that("findTopCorrelations (self) works with blocked zero-variance genes", {
 
     refp <- rbind(ref1$positive, ref2$positive, refo$positive)
     refp <- refp[order(refp$feature1, refp$p.value),]
-    refp <- unlist(heads(split(refp, refp$feature1), 20), use.names=FALSE)
+    refp <- unlist(heads(S4Vectors::split(refp, refp$feature1), 20), use.names=FALSE)
     refn <- rbind(ref1$negative, ref2$negative, refo$negative)
     refn <- refn[order(refn$feature1, refn$p.value),]
-    refn <- unlist(heads(split(refn, refn$feature1), 20), use.names=FALSE)
+    refn <- unlist(heads(S4Vectors::split(refn, refn$feature1), 20), use.names=FALSE)
 
     out <- suppressWarnings(findTopCorrelations(vals1, y=vals2, number=20, d=10, block=block, BSPARAM=BiocSingular::ExactParam()))
     expect_identical(out$positive[,1:4], refp[,1:4])
