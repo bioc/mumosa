@@ -4,7 +4,7 @@
 \alias{ConstantMatrix}
 \alias{ConstantMatrix-class}
 \alias{ConstantMatrixSeed-class}
-\alias{extractArray,ConstantMatrixSeed-method}
+\alias{extract_array,ConstantMatrixSeed-method}
 \alias{DelayedArray,ConstantMatrixSeed-method}
 \alias{ConstantMatrixSeed}
 \title{A DelayedMatrix containing a constant value}

@@ -47,7 +47,7 @@ sce
 We perform some cursory analyses on the RNA component:
 
 ```{r}
-stats <- perCellQCMetrics(sce, list(Mito=grep("^MT-", rownames(sce)))
+stats <- perCellQCMetrics(sce, subsets=list(Mito=grep("^MT-", rownames(sce))))
 filter <- quickPerCellQC(stats, sub.fields="subsets_Mito_percent")
 sce <- sce[,!filter$discard]
 sce <- logNormCounts(sce)

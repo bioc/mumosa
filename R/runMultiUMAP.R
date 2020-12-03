@@ -19,6 +19,7 @@
 #' This argument can be missing, in which case no alternative experiments are used.
 #' @param altexp.assay A character or integer vector specifying the assay to extract from alternative experiments, when \code{altexp} is specified.
 #' This is recycled to the same length as \code{altexp}.
+#' @param extras A list of further matrices of similar structure to those matrices in a list-like \code{x}.
 #' @param ... For the generic, further arguments to pass to specific methods.
 #'
 #' For the ANY method, further arguments to pass to \code{\link[uwot]{umap}}.
@@ -56,7 +57,7 @@
 #' so any variation in \code{metrics} is also assumed to follow this order.
 #'
 #' @seealso
-#' \code{\link{runUMAP}}, for the more straightforward application of UMAP.
+#' \code{\link[scater]{runUMAP}}, for the more straightforward application of UMAP.
 #'
 #' @author Aaron Lun
 #' @examples
@@ -71,8 +72,9 @@
 #' altExp(exprs_sce, "ADT") <- adt_sce
 #'
 #' # Running a multimodal analysis using PCs for expression
-#' # and log-counts for the ADTs:
-#' exprs_sce <- runMultiUMAP(exprs_sce, dimreds="PCA", altexps="ADT")
+#' # and log-counts for the ADTs. Annoyingly, have to prefix
+#' # this for the time being to distinguish from the scater generic.
+#' exprs_sce <- mumosa::runMultiUMAP(exprs_sce, dimreds="PCA", altexps="ADT")
 #' plotReducedDim(exprs_sce, "MultiUMAP")
 #' 
 #' @name runMultiUMAP

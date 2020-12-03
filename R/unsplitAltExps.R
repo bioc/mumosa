@@ -89,8 +89,9 @@ unsplitAltExps <- function(sce, prefix.rows=TRUE, prefix.cols=TRUE) {
     combined
 }
 
-#' @importFrom GenomicRanges GRanges
-#' @importFrom SummarizedExperiment rowRanges
+#' @importFrom S4Vectors mcols<-
+#' @importFrom GenomicRanges GRanges GRangesList
+#' @importFrom SummarizedExperiment rowRanges rowData
 .combine_rowranges <- function(all.se, prefix) {
     final.rd <- vector("list", length(all.se))
     for (s in seq_along(all.se)) {

@@ -15,11 +15,16 @@ Imports:
     methods,
     Matrix,
     BiocGenerics,
+    BiocParallel,
     IRanges,
+    GenomicRanges,
     S4Vectors,
     DelayedArray,
+    DelayedMatrixStats,
     SummarizedExperiment,
     BiocNeighbors,
+    BiocSingular,
+    beachmat,
     scuttle,
     metapod,
     scran,
@@ -29,7 +34,9 @@ Suggests:
     knitr,
     BiocStyle,
     rmarkdown,
-    scater
+    scater,
+    bluster,
+    DropletUtils
 VignetteBuilder: knitr
 biocViews: ImmunoOncology, SingleCell, RNASeq
 Encoding: UTF-8

@@ -46,7 +46,12 @@ If \code{NA}, no approximation of the rank values is performed prior to the sear
 
 \item{block}{A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.}
 
+\item{equiweight}{Logical scalar indicating whether each block should be given equal weight, if \code{block} is specified.
+If \code{FALSE}, each block is weighted by the number of cells.}
+
 \item{use.names}{Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.}
+
+\item{deferred}{Logical scalar indicating whether a fast deferred calculation should be used for the rank-based PCA.}
 
 \item{BSPARAM}{A \linkS4class{BiocSingularParam} object specifying the algorithm to use for the PCA.}
 

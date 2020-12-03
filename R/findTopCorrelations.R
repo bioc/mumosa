@@ -21,6 +21,9 @@
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #' @param assay.type String or integer scalar specifying the assay containing the matrix of interest in \code{x} (and \code{y}, if a SummarizedExperiment).
 #' @param direction String specifying the sign of the correlations to search for.
+#' @param equiweight Logical scalar indicating whether each block should be given equal weight, if \code{block} is specified.
+#' If \code{FALSE}, each block is weighted by the number of cells.
+#' @param deferred Logical scalar indicating whether a fast deferred calculation should be used for the rank-based PCA.
 #'
 #' @return A \linkS4class{List} containing one or two \linkS4class{DataFrame}s for results in each direction.
 #' These are named \code{"positive"} and \code{"negative"}, and are generated according to \code{direction};
@@ -78,7 +81,7 @@
 #' @name findTopCorrelations
 NULL
 
-#' @importFrom S4Vectors DataFrame splitAsList
+#' @importFrom S4Vectors DataFrame splitAsList List
 #' @importFrom IRanges heads
 #' @importFrom stats p.adjust
 #' @importFrom BiocSingular IrlbaParam
@@ -239,7 +242,7 @@ NULL
 ##### Internals ######
 ######################
 
-#' @importFrom S4Vectors DataFrame splitAsList
+#' @importFrom S4Vectors DataFrame splitAsList selfmatch
 #' @importFrom BiocParallel SerialParam
 #' @importFrom DelayedArray DelayedArray setAutoBPPARAM getAutoBPPARAM
 #' @importFrom DelayedMatrixStats rowVars

@@ -58,6 +58,8 @@ See details for how to interpret this argument when \code{x} is a SummarizedExpe
 \item{assays}{A character or integer vector of assays to extract and transpose for use in the ANY method.
 For the SingleCellExperiment, this argument can be missing, in which case no assays are used.}
 
+\item{extras}{A list of further matrices of similar structure to those matrices in a list-like \code{x}.}
+
 \item{dimreds}{A character or integer vector of \code{\link{reducedDims}} to extract for use in the ANY method.
 This argument can be missing, in which case no assays are used.}
 

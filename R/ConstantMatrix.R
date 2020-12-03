@@ -28,7 +28,7 @@
 #' @aliases
 #' ConstantMatrix-class
 #' ConstantMatrixSeed-class
-#' extractArray,ConstantMatrixSeed-method
+#' extract_array,ConstantMatrixSeed-method
 NULL
 
 #' @export

@@ -40,6 +40,9 @@ For the SummarizedExperiment method, further arguments to pass to the ANY method
 
 \item{block}{A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.}
 
+\item{equiweight}{Logical scalar indicating whether each block should be given equal weight, if \code{block} is specified.
+If \code{FALSE}, each block is weighted by the number of cells.}
+
 \item{use.names}{Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying the parallelization scheme to use.}

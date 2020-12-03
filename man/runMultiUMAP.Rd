@@ -48,6 +48,8 @@ This is recycled to the same number of matrices supplied in \code{x}.}
 \item{assays}{A character or integer vector of assays to extract and transpose for use in the UMAP.
 For the SingleCellExperiment, this argument can be missing, in which case no assays are used.}
 
+\item{extras}{A list of further matrices of similar structure to those matrices in a list-like \code{x}.}
+
 \item{dimreds}{A character or integer vector of \code{\link{reducedDims}} to extract for use in the UMAP.
 This argument can be missing, in which case no assays are used.}
 
@@ -102,13 +104,14 @@ adt_sce <- logNormCounts(adt_sce)
 altExp(exprs_sce, "ADT") <- adt_sce
 
 # Running a multimodal analysis using PCs for expression
-# and log-counts for the ADTs:
-exprs_sce <- runMultiUMAP(exprs_sce, dimreds="PCA", altexps="ADT")
+# and log-counts for the ADTs. Annoyingly, have to prefix
+# this for the time being to distinguish from the scater generic.
+exprs_sce <- mumosa::runMultiUMAP(exprs_sce, dimreds="PCA", altexps="ADT")
 plotReducedDim(exprs_sce, "MultiUMAP")
 
 }
 \seealso{
-\code{\link{runUMAP}}, for the more straightforward application of UMAP.
+\code{\link[scater]{runUMAP}}, for the more straightforward application of UMAP.
 }
 \author{
 Aaron Lun
