@@ -145,8 +145,6 @@ plotReducedDim(sce2, "MultiUMAP", colour_by="umap.clustering")
 
 # Correlation analyses
 
-## Across all pairs
-
 Given two modalities, we may be interested in knowing which features in one modality are correlated to the features in another modality.
 The `computeCorrelations()` function does exactly this:
 
@@ -167,8 +165,6 @@ However, this approach can be very slow when dealing with large numbers of featu
 indeed, one may note the subsetting to the first 5 features in the code above.
 Users can enable parallelization via `BPPARAM=` to speed up the process but this will only go so far.
 
-## Top correlations only
-
 An alternative approach is to, for each feature in one modality, perform an approximate search for the top most-correlated features in another modality.
 This assumes that only the strongest correlations (positive or negative) are of actual interest, while the bulk of weak correlations can be ignored.
 We use the `findTopCorrelations()` function with a specified number of top features to extract: 
@@ -180,29 +176,9 @@ top.cor
 ```
 
 This returns the top 10 features in the CITE-seq data (`y`) for each feature in the main RNA-seq data.
-The search is approximate so some features may not be ranked as highly as they would be under an exact search -
+As the search is approximate, some features may not be ranked as highly as they would be under an exact search -
 the approximation quality can be modified by increasing the number of PCs (`d`) used for data compression.
-This provides a quick-and-dirty approach to identifying correlations between modalities.
-
-# Reassembling a `SingleCellExperiment`
-
-Some downstream applications (particularly for visualization, e.g., `r Biocpkg("iSEE")`) only accept one `SingleCellExperiment` object.
-To make them aware of multimodal data, we might consider `rbind`ing all of the alternative Experiments to expose their features in the main Experiment.
-This is facilitated by the `unsplitAltExps()` function:
-
-```{r}
-unsplit <- unsplitAltExps(sce2)
-tail(rownames(unsplit))
-reducedDimNames(unsplit)
-```
-
-It is probably unwise to do any serious analysis on the unsplit `SingleCellExperiment`;
-few procedures come to mind that would consider features from different modalities to be interchangeable.
-However, the unsplit object is quite convenient for visualization as we can just refer to features from other modalities by their (prefixed) name:
-
-```{r}
-plotExpression(unsplit, "CD79A", x="adt.BTLA_PROT", show_smooth=TRUE)
-```
+Blocking is also supported with `block=`, in which case correlations are only computed within each level of the blocking factor.
 
 # Session information {-}
 

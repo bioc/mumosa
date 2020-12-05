@@ -1,15 +1,14 @@
 Package: mumosa
 Type: Package
 Authors@R: person("Aaron", "Lun", role = c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com")
-Version: 0.99.0
-Date: 2020-11-09
+Version: 0.99.1
+Date: 2020-12-05
 License: GPL-3
 Title: Multi-Modal Single-Cell Analysis Methods
 Description: 
     Assorted utilities for multi-modal analyses of single-cell datasets.
-    Includes functions to combine multiple modes for downstream analysis,
-    combine alternative experiments into a single object for visualization, 
-    and to compute correlations between assay values for different modes.
+    Includes functions to combine multiple modalities for downstream analysis
+    and to compute correlations between assay values for different modalities.
 Depends: 
     SingleCellExperiment
 Imports: 
