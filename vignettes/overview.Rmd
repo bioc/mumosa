@@ -29,7 +29,7 @@ and to combine data together from multiple modalities for integrated downstream 
 The actual analyses of each individual modality are deferred to other packages;
 the scope of `r Biocpkg("mumosa")` is limited to the sharing of information across modalities.
 
-# Setting up the data
+# Setting up the dataset
 
 To demonstrate the functionalities of this package, we will use a subset of a CITE-seq experiment from the `r Biocpkg("scRNAseq")` package.
 The main Experiment contains the RNA-seq counts while the `adt` alternative Experiment contains the CITE-seq counts -
@@ -73,16 +73,14 @@ set.seed(10000)
 sceA <- runPCA(sceA, ncomponents=15)
 ```
 
-Putting everything back into the same object again, onyl considering the cells passing QC in both modalities.
+Finally, we put everything back into the same object, only considering the cells passing QC in both modalities.
 
 ```{r}
 sce2 <- sce[,keep]
 altExp(sce2) <- sceA
 ```
 
-# Combining multi-modal data
-
-## Using rescaling matrices
+# Rescaling by neighbors 
 
 The easiest way to combine data for the same set of cells is to simply `cbind` their matrices together prior to downstream analyses like clustering.
 However, this requires some rescaling to adjust for the differences in the number of features and variation of each modality;
@@ -111,12 +109,12 @@ plotTSNE(sce2, colour_by="combined.clustering")
 Advanced users can also adjust the weight given to each modality via the `weights=` argument;
 a modality assigned a weight of 2 will mean that the rescaled distance is twice that of a modality with a weight of 1.
 
-## Using UMAP
+# Multi-metric UMAP 
 
 Another approach is to take advantage of UMAP's ability to combine information on different scales.
 This is achieved by - roughly speaking - creating nearest-neighbor graphs within each modality,
 and then "intersecting" the graphs such that cells are only considered to be neighbors if they are neighbors in each modality.
-In this manner, we incorporate locality information from all modes without explicitly comparing distances across modes.
+In this manner, we incorporate locality information from all modalities without explicitly comparing distances.
 We apply this strategy using the `calculateMultiUMAP()` function,
 increasing the number of components to avoid loss of information.
 
@@ -141,6 +139,37 @@ And also visualization, though perhaps it is more natural to just compute the UM
 set.seed(100002)
 sce2 <- runMultiUMAP(sce2, dimred="PCA", extras=list(reducedDim(altExp(sce2))))
 plotReducedDim(sce2, "MultiUMAP", colour_by="umap.clustering")
+```
+
+# Intersecting graphs
+
+Inspired by the UMAP approach, we can perform intersections on arbitrary graphs with the `intersectGraphs()` function.
+This is relevant in cases where we have nearest-neighbor graphs constructed separately for each modality, e.g., for graph-based clustering.
+For example, we might have one constructed using the PCA derived from the gene expression matrices:
+
+```{r}
+g.rna <- buildSNNGraph(sce2, use.dimred="PCA")
+rna.clusters <- igraph::cluster_walktrap(g.rna)$membership
+table(rna.clusters)
+```
+
+And similarly, we might have another for the ADT data:
+
+```{r}
+g.adt <- buildSNNGraph(altExp(sce2), use.dimred='PCA')
+adt.clusters <- igraph::cluster_walktrap(g.adt)$membership
+table(adt.clusters)
+```
+
+We intersect these graphs by setting the weights of edges to the product of the edge weights from each individual graph.
+Two cells will only be connected by a high-weighted edge if that edge is of high weight in each original graph,
+i.e., cells must be nearest neighbors in all modalities to be considered as nearest neighbors in the intersection.
+We can then use this graph for clustering, which hopefully gives us clusters where cells are similar across all modalities.
+
+```{r}
+g.com <- intersectGraphs(g.rna, g.adt)
+com.clusters <- igraph::cluster_walktrap(g.com)$membership
+table(com.clusters)
 ```
 
 # Correlation analyses

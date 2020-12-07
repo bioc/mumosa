@@ -15,6 +15,7 @@ Imports:
     stats,
     utils,
     methods,
+    igraph,
     Matrix,
     BiocGenerics,
     BiocParallel,
