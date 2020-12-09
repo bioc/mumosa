@@ -1,8 +1,8 @@
 Package: mumosa
 Type: Package
 Authors@R: person("Aaron", "Lun", role = c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com")
-Version: 0.99.1
-Date: 2020-12-05
+Version: 0.99.2
+Date: 2020-12-08
 License: GPL-3
 Title: Multi-Modal Single-Cell Analysis Methods
 Description: 
@@ -20,7 +20,6 @@ Imports:
     BiocGenerics,
     BiocParallel,
     IRanges,
-    GenomicRanges,
     S4Vectors,
     DelayedArray,
     DelayedMatrixStats,
@@ -39,7 +38,8 @@ Suggests:
     rmarkdown,
     scater,
     bluster,
-    DropletUtils
+    DropletUtils,
+    scRNAseq
 VignetteBuilder: knitr
 biocViews: ImmunoOncology, SingleCell, RNASeq
 Encoding: UTF-8
