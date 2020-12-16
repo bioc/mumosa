@@ -226,6 +226,7 @@ We use the `findTopCorrelations()` function with a specified number of top featu
 set.seed(100001) # for IRLBA.
 top.cor <- findTopCorrelations(sce2[1:100,], y=altExp(sce2), number=10)
 top.cor
+top.cor$positive
 ```
 
 This returns the top 10 features in the CITE-seq data (`y`) for each feature in the main RNA-seq data.

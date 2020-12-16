@@ -354,15 +354,14 @@ NULL
 
 #' @importFrom S4Vectors DataFrame
 #' @importFrom metapod parallelStouffer
+#' @importFrom scran rhoToPValue
 .create_output_dataframe <- function(indices, rho, nblocks, equiweight, positive, chosen1, chosen2) {
     rho <- do.call(mapply, c(list(FUN=rbind, SIMPLIFY=FALSE), rho)) # still fragmented from the blockApply.
     mean.rho <- .compute_mean_rho(rho, nblocks, equiweight)
 
     self <- rep(chosen1, ncol(indices))
     df <- DataFrame(feature1=self, feature2=chosen2[as.vector(indices)], rho=as.vector(mean.rho))
-
-    p.values <- mapply(FUN=.compute_cor_p, rho=rho, ncells=nblocks, 
-        MoreArgs=list(positive=positive), SIMPLIFY=FALSE)
+    p.values <- mapply(FUN=rhoToPValue, rho=rho, n=nblocks, MoreArgs=list(positive=positive), SIMPLIFY=FALSE)
 
     if (length(nblocks)==1L) {
         p.value <- p.values[[1]]

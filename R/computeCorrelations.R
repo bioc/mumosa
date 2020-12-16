@@ -46,9 +46,9 @@
 #' @name computeCorrelations
 NULL
 
-#####################
-##### Overlord ######
-#####################
+######################
+##### Internals ######
+######################
 
 #' @importFrom Matrix t
 #' @importFrom beachmat rowBlockApply
@@ -57,6 +57,7 @@ NULL
 #' @importFrom metapod parallelStouffer
 #' @importFrom BiocParallel SerialParam bpstart bpstop
 #' @importFrom scuttle .bpNotSharedOrUp
+#' @importFrom scran rhoToPValue
 .compute_all_correlations <- function(x, y, block=NULL, equiweight=TRUE, use.names=TRUE, BPPARAM=SerialParam()) {
     if (!.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
@@ -94,7 +95,7 @@ NULL
     df <- DataFrame(feature1=self, feature2=other, rho=as.vector(mean.rho))
     df <- .fill_names(df, use.names, names1, names2)
 
-    p.values <- mapply(FUN=.compute_cor_p, rho=rho, ncells=nblocks, MoreArgs=list(positive=NULL), SIMPLIFY=FALSE)
+    p.values <- mapply(FUN=rhoToPValue, rho=rho, n=nblocks, SIMPLIFY=FALSE)
 
     if (length(nblocks)==1L) {
         up.value <- p.values[[1]]$positive
@@ -149,20 +150,12 @@ NULL
     output
 }
 
-######################
-##### Internals ######
-######################
-
 #' @importFrom S4Vectors DataFrame
+#' @importFrom metapod averageParallelStats
 .compute_mean_rho <- function(rho, nblocks, equiweight) {
-    if (length(nblocks)==1L) {
-        rho[[1]]
-    } else if (equiweight) {
-        Reduce("+", rho)/length(rho)
-    } else {
-        mean.rho <- mapply("*", rho, nblocks, SIMPLIFY=FALSE)
-        Reduce("+", mean.rho)/sum(nblocks)
-    }
+    weights <- NULL
+    if (!equiweight) weights <- nblocks
+    averageParallelStats(rho, weights=weights)
 }
 
 .fill_names <- function(df, use.names, names1, names2) {
@@ -175,23 +168,6 @@ NULL
         }
     }
     df
-}
-
-#' @importFrom stats pt
-.compute_cor_p <- function(rho, ncells, positive) {
-    # Mildly adapted from cor.test.
-    q <- (ncells^3 - ncells) * (1 - rho)/6
-    den <- (ncells * (ncells^2 - 1)/6)
-    r <- 1 - q/den
-    tstat <- r/sqrt((1 - r^2)/(ncells - 2))
-
-    FUN <- function(p) pt(tstat, df = ncells - 2, lower.tail = !p)
-
-    if (!is.null(positive)) {
-        FUN(positive)
-    } else {
-        list(positive=FUN(TRUE), negative=FUN(FALSE))
-    }
 }
 
 #######################
