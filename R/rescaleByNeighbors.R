@@ -89,7 +89,7 @@ NULL
         stop("'x' must contain one or more matrices")
     }
 
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }

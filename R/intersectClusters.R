@@ -58,7 +58,7 @@ intersectClusters <- function(clusters, coords, scale=1, BPPARAM=SerialParam()) 
     old <- getAutoBPPARAM()
     setAutoBPPARAM(BPPARAM)
     on.exit(setAutoBPPARAM(old), add=TRUE)
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }

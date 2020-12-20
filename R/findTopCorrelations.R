@@ -101,7 +101,7 @@ NULL
     subset.cols=NULL, block=NULL, equiweight=TRUE, use.names=TRUE, deferred=TRUE, 
     BSPARAM=IrlbaParam(), BNPARAM=KmknnParam(), BPPARAM=SerialParam()) 
 {
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }

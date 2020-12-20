@@ -59,7 +59,7 @@ NULL
 #' @importFrom scuttle .bpNotSharedOrUp .subset2index
 #' @importFrom scran rhoToPValue
 .compute_all_correlations <- function(x, y, subset.cols=NULL, block=NULL, equiweight=TRUE, use.names=TRUE, BPPARAM=SerialParam()) {
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
