@@ -14,6 +14,7 @@ findTopCorrelations(x, number, ...)
   y = NULL,
   d = 50,
   direction = c("both", "positive", "negative"),
+  subset.cols = NULL,
   block = NULL,
   equiweight = TRUE,
   use.names = TRUE,
@@ -23,7 +24,14 @@ findTopCorrelations(x, number, ...)
   BPPARAM = SerialParam()
 )
 
-\S4method{findTopCorrelations}{SummarizedExperiment}(x, number, y = NULL, ..., assay.type = "logcounts")
+\S4method{findTopCorrelations}{SummarizedExperiment}(
+  x,
+  number,
+  y = NULL,
+  use.names = TRUE,
+  ...,
+  assay.type = "logcounts"
+)
 }
 \arguments{
 \item{x, y}{Normalized expression matrices containing features in the rows and cells in the columns.
@@ -31,7 +39,7 @@ Each matrix should have the same set of columns but a different set of features,
 
 Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
 
-\code{y} may be missing, in which correlations are computed between features in \code{x}.}
+Finally, \code{y} may be \code{NULL}, in which correlations are computed between features in \code{x}.}
 
 \item{number}{Integer scalar specifying the number of top correlated features to report for each feature in \code{x}.}
 
@@ -44,12 +52,19 @@ If \code{NA}, no approximation of the rank values is performed prior to the sear
 
 \item{direction}{String specifying the sign of the correlations to search for.}
 
+\item{subset.cols}{Vector indicating the columns of \code{x} (and \code{y}) to retain for computing correlations.}
+
 \item{block}{A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.}
 
 \item{equiweight}{Logical scalar indicating whether each block should be given equal weight, if \code{block} is specified.
 If \code{FALSE}, each block is weighted by the number of cells.}
 
-\item{use.names}{Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.}
+\item{use.names}{Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.
+
+For the SummarizedExperiment method, this may also be a string specifying the \code{\link{rowData}} column containing the names to use;
+or a character vector of length 2, where the first and second entries specify the \code{\link{rowData}} columns containing the names in \code{x} and \code{y} respectively.
+If either entry is \code{NA}, the existing row names for the corresponding object are used.
+Note that this only has an effect on \code{y} if it is a SummarizedExperiment.}
 
 \item{deferred}{Logical scalar indicating whether a fast deferred calculation should be used for the rank-based PCA.}
 

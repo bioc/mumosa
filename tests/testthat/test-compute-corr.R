@@ -29,6 +29,11 @@ test_that("computeCorrelations works correctly", {
     }
     expect_identical(vec.rho, output$rho[chosen])
     expect_identical(vec.p, output$p.value[chosen])
+
+    # Handles subset.cols correctly
+    sub <- computeCorrelations(sce1, sce2, subset.cols=10:100)
+    ref <- computeCorrelations(sce1[,10:100], sce2[,10:100])
+    expect_identical(sub, ref)
 })
 
 set.seed(10002)
@@ -40,8 +45,13 @@ test_that("computeCorrelations works correctly by itself", {
     ref <- ref[ref$feature1!=ref$feature2,]
     ref$FDR <- p.adjust(ref$p.value, method="BH")
 
-    output <- computeCorrelations(sce)
+    output <- computeCorrelations(sce, y=NULL)
     expect_identical(ref, output)
+
+    # Works correctly with subset.cols.
+    sub <- computeCorrelations(sce, y=NULL, subset.cols=10:100)
+    ref <- computeCorrelations(sce[,10:100], y=NULL)
+    expect_identical(sub, ref)
 })
 
 set.seed(10003)
@@ -78,6 +88,11 @@ test_that("computeCorrelations works correctly with blocking", {
     weight <- computeCorrelations(sce1, y=sce2, block=block0)
     noweight <- computeCorrelations(sce1, y=sce2, block=block0, equiweight=FALSE)
     expect_false(isTRUE(all.equal(weight, noweight)))
+
+    # subset.cols works as expected.
+    sub <- computeCorrelations(sce1, sce2, block=block, subset.cols=10:100)
+    ref <- computeCorrelations(sce1[,10:100], sce2[,10:100], block=block[10:100])
+    expect_identical(sub, ref)
 })
 
 library(DelayedArray)
@@ -91,17 +106,44 @@ test_that("computeCorrelations handles the looping correctly", {
     counts(sce2) <- DelayedArray(counts(sce2))
     sce2 <- logNormCounts(sce1)
 
-    ref1 <- computeCorrelations(sce1)
+    ref1 <- computeCorrelations(sce1, y=NULL)
     ref2 <- computeCorrelations(sce1, sce2)
 
     old <- getAutoBlockSize()
     setAutoBlockSize(ncol(sce1)*8*2)
 
-    out1 <- computeCorrelations(sce1)
+    out1 <- computeCorrelations(sce1, y=NULL)
     out2 <- computeCorrelations(sce1, sce2)
 
     setAutoBlockSize(old)
 
     expect_identical(out1, ref1)
     expect_identical(out2, ref2)
+})
+
+set.seed(10005)
+test_that("computeCorrelations handles the names correctly", {
+    sce1 <- mockSCE()
+    sce1 <- logNormCounts(sce1)
+    sce2 <- mockSCE(ngenes=10) 
+    sce2 <- logNormCounts(sce2)
+
+    ref <- computeCorrelations(sce1, sce2)
+    num.only <- computeCorrelations(sce1, sce2, use.names=FALSE)
+    expect_identical(ref$feature1, rownames(sce1)[num.only$feature1])
+    expect_identical(ref$feature2, rownames(sce2)[num.only$feature2])
+
+    rowData(sce1)$BLAH <- tolower(rownames(sce1))
+    rowData(sce2)$BLAH <- tolower(rownames(sce2))
+    use.rd <- computeCorrelations(sce1, sce2, use.names="BLAH")
+    expect_identical(use.rd$feature1, tolower(ref$feature1))
+    expect_identical(use.rd$feature2, tolower(ref$feature2))
+
+    use.rd <- computeCorrelations(sce1, sce2, use.names=c(NA, "BLAH"))
+    expect_identical(use.rd$feature1, ref$feature1)
+    expect_identical(use.rd$feature2, tolower(ref$feature2))
+
+    use.rd <- computeCorrelations(sce1, logcounts(sce2), use.names="BLAH")
+    expect_identical(use.rd$feature1, tolower(ref$feature1))
+    expect_identical(use.rd$feature2, ref$feature2)
 })

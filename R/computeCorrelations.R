@@ -6,7 +6,7 @@
 #'
 #' @return
 #' A DataFrame where each row corresponds to a pair of features in \code{x} and \code{y}.
-#' (If \code{y} is missing, each pair corresponds to a pair of features in \code{x}.)
+#' (If \code{y=NULL}, each pair corresponds to a pair of features in \code{x}.)
 #' This contains the following fields:
 #' \itemize{
 #' \item \code{feature1}, the name (character) or row index (integer) of each feature in \code{x}.
@@ -56,12 +56,19 @@ NULL
 #' @importFrom stats p.adjust
 #' @importFrom metapod parallelStouffer
 #' @importFrom BiocParallel SerialParam bpstart bpstop
-#' @importFrom scuttle .bpNotSharedOrUp
+#' @importFrom scuttle .bpNotSharedOrUp .subset2index
 #' @importFrom scran rhoToPValue
-.compute_all_correlations <- function(x, y, block=NULL, equiweight=TRUE, use.names=TRUE, BPPARAM=SerialParam()) {
+.compute_all_correlations <- function(x, y, subset.cols=NULL, block=NULL, equiweight=TRUE, use.names=TRUE, BPPARAM=SerialParam()) {
     if (!.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
+    }
+
+    if (!is.null(subset.cols)) {
+        subset.cols <- .subset2index(subset.cols, x, byrow=FALSE)
+        x <- x[,subset.cols,drop=FALSE]
+        y <- y[,subset.cols,drop=FALSE]
+        block <- block[subset.cols]
     }
 
     if (is.null(block)) {
@@ -72,7 +79,7 @@ NULL
         nblocks <- lengths(by.block)
     }
 
-    if (missing(y)) {
+    if (is.null(y)) {
         alt <- x
     } else {
         alt <- y
@@ -81,7 +88,7 @@ NULL
     rho <- do.call(mapply, c(list(FUN=rbind, SIMPLIFY=FALSE), rho)) # still fragmented from the blockApply.
     mean.rho <- .compute_mean_rho(rho, nblocks, equiweight)
 
-    if (missing(y)) {
+    if (is.null(y)) {
         names1 <- names2 <- rownames(x)
         nother <- nrow(x)
     } else {
@@ -115,7 +122,7 @@ NULL
     }
 
     df$p.value <- pmin(up.value, down.value, 0.5)*2
-    if (missing(y)) {
+    if (is.null(y)) {
         df <- df[df$feature1!=df$feature2,,drop=FALSE]
     }
     df$FDR <- p.adjust(df$p.value, method="BH")
@@ -184,11 +191,32 @@ setMethod("computeCorrelations", "ANY", .compute_all_correlations)
 
 #' @export
 #' @rdname computeCorrelations
-#' @importFrom SummarizedExperiment assay
-setMethod("computeCorrelations", "SummarizedExperiment", function(x, y, ..., assay.type="logcounts") {
-    if (!missing(y) && is(y, "SummarizedExperiment")) {
-        y <- assay(y, assay.type)
-    }
-    x <- assay(x, assay.type)
-    .compute_all_correlations(x, y, ...)
+setMethod("computeCorrelations", "SummarizedExperiment", function(x, y, use.names=TRUE, ..., assay.type="logcounts") {
+    formatted <- .format_xy_for_correlations(x, y, use.names=use.names, assay.type=assay.type)
+    .compute_all_correlations(formatted$x, formatted$y, use.names=formatted$use.names, ...)
 })
+
+#' @importFrom SummarizedExperiment rowData assay
+.format_xy_for_correlations <- function(x, y, use.names=TRUE, assay.type="logcounts") {
+    x0 <- assay(x, assay.type)
+
+    y0 <- y
+    if (is(y, "SummarizedExperiment")) {
+        y0 <- assay(y, assay.type)
+    }
+
+    if (is.character(use.names)) {
+        use.names <- rep(use.names, length.out=2)
+        if (!is.na(use.names[1])) {
+            rownames(x0) <- rowData(x)[,use.names[[1]]]
+        }
+        if (!is.na(use.names[2]) && is(y, "SummarizedExperiment")) {
+            rownames(y0) <- rowData(y)[,use.names[[2]]]
+        }
+        use.names <- TRUE
+    }
+
+    list(x=x0, y=y0, use.names=use.names)
+}
+
+

@@ -11,13 +11,14 @@ computeCorrelations(x, y, ...)
 \S4method{computeCorrelations}{ANY}(
   x,
   y,
+  subset.cols = NULL,
   block = NULL,
   equiweight = TRUE,
   use.names = TRUE,
   BPPARAM = SerialParam()
 )
 
-\S4method{computeCorrelations}{SummarizedExperiment}(x, y, ..., assay.type = "logcounts")
+\S4method{computeCorrelations}{SummarizedExperiment}(x, y, use.names = TRUE, ..., assay.type = "logcounts")
 }
 \arguments{
 \item{x}{Normalized expression matrices containing features in the rows and cells in the columns.
@@ -25,25 +26,32 @@ Each matrix should have the same set of columns but a different set of features,
 
 Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
 
-\code{y} may be missing, in which correlations are computed between features in \code{x}.}
+Finally, \code{y} may be \code{NULL}, in which correlations are computed between features in \code{x}.}
 
 \item{y}{Normalized expression matrices containing features in the rows and cells in the columns.
 Each matrix should have the same set of columns but a different set of features, usually corresponding to different modes for the same cells.
 
 Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
 
-\code{y} may be missing, in which correlations are computed between features in \code{x}.}
+Finally, \code{y} may be \code{NULL}, in which correlations are computed between features in \code{x}.}
 
 \item{...}{For the generic, further arguments to pass to specific methods.
 
 For the SummarizedExperiment method, further arguments to pass to the ANY method.}
+
+\item{subset.cols}{Vector indicating the columns of \code{x} (and \code{y}) to retain for computing correlations.}
 
 \item{block}{A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.}
 
 \item{equiweight}{Logical scalar indicating whether each block should be given equal weight, if \code{block} is specified.
 If \code{FALSE}, each block is weighted by the number of cells.}
 
-\item{use.names}{Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.}
+\item{use.names}{Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.
+
+For the SummarizedExperiment method, this may also be a string specifying the \code{\link{rowData}} column containing the names to use;
+or a character vector of length 2, where the first and second entries specify the \code{\link{rowData}} columns containing the names in \code{x} and \code{y} respectively.
+If either entry is \code{NA}, the existing row names for the corresponding object are used.
+Note that this only has an effect on \code{y} if it is a SummarizedExperiment.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying the parallelization scheme to use.}
 
@@ -51,7 +59,7 @@ If \code{FALSE}, each block is weighted by the number of cells.}
 }
 \value{
 A DataFrame where each row corresponds to a pair of features in \code{x} and \code{y}.
-(If \code{y} is missing, each pair corresponds to a pair of features in \code{x}.)
+(If \code{y=NULL}, each pair corresponds to a pair of features in \code{x}.)
 This contains the following fields:
 \itemize{
 \item \code{feature1}, the name (character) or row index (integer) of each feature in \code{x}.

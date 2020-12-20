@@ -7,12 +7,17 @@
 #' 
 #' Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
 #'
-#' \code{y} may be missing, in which correlations are computed between features in \code{x}.
+#' Finally, \code{y} may be \code{NULL}, in which correlations are computed between features in \code{x}.
 #' @param number Integer scalar specifying the number of top correlated features to report for each feature in \code{x}.
 #' @param block A vector or factor of length equal to the number of cells, specifying the block of origin for each cell.
 #' @param d Integer scalar specifying the number of dimensions to use for the approximate search via PCA.
 #' If \code{NA}, no approximation of the rank values is performed prior to the search.
 #' @param use.names Logical scalar specifying whether row names of \code{x} and/or \code{y} should be reported in the output, if available.
+#'
+#' For the SummarizedExperiment method, this may also be a string specifying the \code{\link{rowData}} column containing the names to use;
+#' or a character vector of length 2, where the first and second entries specify the \code{\link{rowData}} columns containing the names in \code{x} and \code{y} respectively.
+#' If either entry is \code{NA}, the existing row names for the corresponding object are used.
+#' Note that this only has an effect on \code{y} if it is a SummarizedExperiment.
 #' @param BSPARAM A \linkS4class{BiocSingularParam} object specifying the algorithm to use for the PCA.
 #' @param BNPARAM A \linkS4class{BiocNeighborParam} object specifying the algorithm to use for the neighbor search.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying the parallelization scheme to use.
@@ -24,6 +29,7 @@
 #' @param equiweight Logical scalar indicating whether each block should be given equal weight, if \code{block} is specified.
 #' If \code{FALSE}, each block is weighted by the number of cells.
 #' @param deferred Logical scalar indicating whether a fast deferred calculation should be used for the rank-based PCA.
+#' @param subset.cols Vector indicating the columns of \code{x} (and \code{y}) to retain for computing correlations.
 #'
 #' @return A \linkS4class{List} containing one or two \linkS4class{DataFrame}s for results in each direction.
 #' These are named \code{"positive"} and \code{"negative"}, and are generated according to \code{direction};
@@ -87,20 +93,27 @@ NULL
 #' @importFrom BiocSingular IrlbaParam
 #' @importFrom BiocNeighbors findKNN queryKNN KmknnParam buildIndex
 #' @importFrom BiocParallel SerialParam bpstart bpstop
-#' @importFrom scuttle .bpNotSharedOrUp
+#' @importFrom scuttle .bpNotSharedOrUp .subset2index
 #' @importFrom DelayedArray DelayedArray
 #' @importFrom DelayedMatrixStats rowAnys
 .find_top_correlations <- function(x, number=10, y=NULL, d=50, 
     direction=c("both", "positive", "negative"), 
-    block=NULL, equiweight=TRUE, use.names=TRUE, deferred=TRUE, 
+    subset.cols=NULL, block=NULL, equiweight=TRUE, use.names=TRUE, deferred=TRUE, 
     BSPARAM=IrlbaParam(), BNPARAM=KmknnParam(), BPPARAM=SerialParam()) 
 {
-    direction <- match.arg(direction)
     if (!.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
 
+    if (!is.null(subset.cols)) {
+        subset.cols <- .subset2index(subset.cols, x, byrow=FALSE)
+        x <- x[,subset.cols,drop=FALSE]
+        y <- y[,subset.cols,drop=FALSE]
+        block <- block[subset.cols]
+    }
+
+    direction <- match.arg(direction)
     self.search <- is.null(y)
 
     # Wrapping in DA's to avoid actually subsetting the matrices unnecessarily.
@@ -394,10 +407,7 @@ setMethod("findTopCorrelations", "ANY", .find_top_correlations)
 #' @export
 #' @rdname findTopCorrelations
 #' @importFrom SummarizedExperiment assay
-setMethod("findTopCorrelations", "SummarizedExperiment", function(x, number, y=NULL, ..., assay.type="logcounts") {
-    if (is(y, "SummarizedExperiment")) {
-        y <- assay(y, assay.type)
-    }
-    x <- assay(x, assay.type)
-    .find_top_correlations(x, number=number, y=y, ...)
+setMethod("findTopCorrelations", "SummarizedExperiment", function(x, number, y=NULL, use.names=TRUE, ..., assay.type="logcounts") {
+    formatted <- .format_xy_for_correlations(x, y, use.names=use.names, assay.type=assay.type)
+    .find_top_correlations(formatted$x, number=number, y=formatted$y, use.names=formatted$use.names, ...)
 })

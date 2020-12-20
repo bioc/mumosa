@@ -38,6 +38,11 @@ test_that("findTopCorrelations works for the top self-correlations", {
 
     dfn <- findTopCorrelations(sce, number=20, d=nrow(sce), direction="negative", BSPARAM=BiocSingular::ExactParam()) 
     expect_identical(dfn, df["negative"])
+
+    # Handles subset.cols correctly.
+    sub <- findTopCorrelations(sce, number=5, d=NA, subset.cols=5:150)
+    ref <- findTopCorrelations(sce[,5:150], number=5, d=NA)
+    expect_identical(sub, ref)
 })
 
 test_that("findTopCorrelations p-value is correctly computed", {
@@ -121,6 +126,11 @@ test_that("findTopCorrelations works for the top cross-correlations", {
 
     dfn <- findTopCorrelations(sce1, y=sce2, number=20, d=ncol(sce2), direction="negative", BSPARAM=BiocSingular::ExactParam()) 
     expect_identical(dfn, df["negative"])
+
+    # Handles subset.cols correctly.
+    sub <- findTopCorrelations(sce1, y=sce2, number=5, d=NA, subset.cols=5:150)
+    ref <- findTopCorrelations(sce1[,5:150], y=sce2[,5:150], number=5, d=NA)
+    expect_identical(sub, ref)
 })
 
 set.seed(109109102)
@@ -160,6 +170,11 @@ test_that("findTopCorrelations works with blocked self-correlations", {
     weight <- findTopCorrelations(sce, number=20, d=NA, block=block0, BSPARAM=BiocSingular::ExactParam())
     noweight <- findTopCorrelations(sce, number=20, d=NA, block=block0, equiweight=FALSE, BSPARAM=BiocSingular::ExactParam())
     expect_false(isTRUE(all.equal(weight, noweight)))
+
+    # Handles subset.cols correctly.
+    sub <- findTopCorrelations(sce, number=5, block=block, d=NA, subset.cols=5:150)
+    ref <- findTopCorrelations(sce[,5:150], block=block[5:150], number=5, d=NA)
+    expect_identical(sub, ref)
 })
 
 set.seed(109109103)
@@ -202,6 +217,11 @@ test_that("findTopCorrelations works with blocked cross-correlations", {
     weight <- findTopCorrelations(sce1, y=sce2, number=20, d=NA, block=block0, BSPARAM=BiocSingular::ExactParam())
     noweight <- findTopCorrelations(sce1, y=sce2, number=20, d=NA, block=block0, equiweight=FALSE, BSPARAM=BiocSingular::ExactParam())
     expect_false(isTRUE(all.equal(weight, noweight)))
+
+    # Handles subset.cols correctly.
+    sub <- findTopCorrelations(sce1, y=sce2, number=5, block=block, d=NA, subset.cols=5:150)
+    ref <- findTopCorrelations(sce1[,5:150], y=sce2[,5:150], block=block[5:150], number=5, d=NA)
+    expect_identical(sub, ref)
 })
 
 set.seed(109109104)
