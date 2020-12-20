@@ -197,7 +197,7 @@ NULL
                         get.distance=FALSE, BNINDEX=precomputed, BPPARAM=BPPARAM)
                 }
 
-                rho <- rowBlockApply(rank.out[in.first,,drop=FALSE], FUN=.compute_exact_neighbor_rho, 
+                rho <- rowBlockApply(rank.out[in.first,,drop=FALSE], FUN=.compute_exact_neighbor_rho, grid=TRUE,
                     nblocks=nblocks, other=rank.out[in.second,,drop=FALSE], indices=nn.out$index, BPPARAM=BPPARAM)
                 output$positive[[ocounter]] <- .create_output_dataframe(nn.out$index, rho, positive=TRUE, 
                     nblocks=nblocks, equiweight=equiweight, chosen1=x.chosen, chosen2=y.chosen)
@@ -215,7 +215,7 @@ NULL
                     nn.out$index <- t(stripped)
                 }
 
-                rho <- rowBlockApply(rank.out[in.first,,drop=FALSE], FUN=.compute_exact_neighbor_rho, 
+                rho <- rowBlockApply(rank.out[in.first,,drop=FALSE], FUN=.compute_exact_neighbor_rho, grid=TRUE,
                     nblocks=nblocks, other=rank.out[in.second,,drop=FALSE], indices=nn.out$index, BPPARAM=BPPARAM)
                 output$negative[[ocounter]] <- .create_output_dataframe(nn.out$index, rho, positive=FALSE, 
                     nblocks=nblocks, equiweight=equiweight, chosen1=x.chosen, chosen2=y.chosen)

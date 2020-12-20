@@ -77,7 +77,7 @@ NULL
     } else {
         alt <- y
     }
-    rho <- rowBlockApply(x, FUN=.compute_exact_rho, other=alt, by.block=by.block, BPPARAM=BPPARAM)
+    rho <- rowBlockApply(x, FUN=.compute_exact_rho, other=alt, by.block=by.block, grid=TRUE, BPPARAM=BPPARAM)
     rho <- do.call(mapply, c(list(FUN=rbind, SIMPLIFY=FALSE), rho)) # still fragmented from the blockApply.
     mean.rho <- .compute_mean_rho(rho, nblocks, equiweight)
 
@@ -136,13 +136,13 @@ NULL
     }
 
     if (is.null(by.block)) {
-        output <- rowBlockApply(other, FUN=FUN, primary=x)
+        output <- rowBlockApply(other, FUN=FUN, primary=x, grid=TRUE)
         output <- list(do.call(cbind, output))
     } else {
         output <- vector("list", length(by.block))
         for (n in seq_along(by.block)) {
             chosen <- by.block[[n]] 
-            subout <- rowBlockApply(other[,chosen,drop=FALSE], FUN=FUN, primary=x[,chosen,drop=FALSE])
+            subout <- rowBlockApply(other[,chosen,drop=FALSE], FUN=FUN, grid=TRUE, primary=x[,chosen,drop=FALSE])
             output[[n]] <- do.call(cbind, subout)
         }
     }
