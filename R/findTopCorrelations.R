@@ -167,36 +167,25 @@ NULL
                 y0 <- y[y.chosen,cells,drop=FALSE]
             }
 
-            if (direction=="positive") {
-                in.first <- seq_len(nrow(x0))
-                if (same) {
-                    in.second <- in.first
-                    combined <- t(x0)
-                } else {
-                    in.second <- nrow(x0) + seq_len(nrow(y0))
-                    combined <- cbind(t(x0), t(y0))
-                }
-            } else {
-                in.first <- seq_len(nrow(x0))
-                in.first.neg <- nrow(x0) + in.first
+            # This bit bears some explaining. We want to combine x and y into a single matrix
+            # to do the PCA, so that all features are projected into the same space. 'in.first'
+            # and 'in.second' just allow us to remember where 'x' and 'y' ends and starts. In 
+            # addition, we also want to project the flipped features (to get the negative 
+            # correlations), hence the 'in.first.neg'.
+            in.first <- seq_len(nrow(x0))
+            if (same) {
+                in.second <- in.first
                 combined <- t(x0)
-
-                if (same) {
-                    in.second <- in.first
-                    combined <- cbind(combined, -combined)
-                } else {
-                    in.second <- 2L*nrow(x0) + seq_len(nrow(y0))
-
-                    # We make positive and negative versions of all of them for symmetry's sake.
-                    # Technically we only need a negative version of the smaller one... oh well.
-                    alt <- t(y0)
-                    combined <- cbind(combined, -combined, alt, -alt)
-                }
+            } else {
+                in.second <- nrow(x0) + seq_len(nrow(y0))
+                combined <- cbind(t(x0), t(y0))
             }
+            flip <- direction!="positive"
+            in.first.neg <- ncol(combined) + in.first
 
             nblocks <- lengths(block.info)
             stash <- .create_blocked_rank_matrix(combined, deferred=deferred, nblocks=nblocks,
-                d=d, equiweight=equiweight, BSPARAM=BSPARAM, BPPARAM=BPPARAM)
+                d=d, equiweight=equiweight, BSPARAM=BSPARAM, BPPARAM=BPPARAM, flip=flip)
             rank.out <- stash$rank.out
             search.out <- stash$search.out
 
@@ -291,7 +280,7 @@ NULL
 #' @importFrom DelayedArray getAutoBPPARAM setAutoBPPARAM
 #' @importFrom scran scaledColRanks
 #' @importFrom BiocSingular runPCA
-.create_blocked_rank_matrix <- function(x, deferred, nblocks, ..., d, equiweight, BSPARAM, BPPARAM) {
+.create_blocked_rank_matrix <- function(x, deferred, nblocks, ..., d, equiweight, flip, BSPARAM, BPPARAM) {
     old <- getAutoBPPARAM()
     setAutoBPPARAM(BPPARAM)
     on.exit(setAutoBPPARAM(old))
@@ -306,12 +295,23 @@ NULL
         x0 <- x[chosen,,drop=FALSE]
 
         if (!deferred) {
-            rank.out[[i]] <- scaledColRanks(x0, BPPARAM=BPPARAM, transposed=TRUE)
+            y <- scaledColRanks(x0, BPPARAM=BPPARAM, transposed=TRUE)
+            if (flip) {
+                # Flipping to compute the negative correlations.
+                # This takes advantage of the fact that scaledColRanks(-x0) == -y.
+                y <- rbind(y, -y)
+            }
         } else {
             y <- scaledColRanks(x0, transposed=FALSE, as.sparse=TRUE, BPPARAM=BPPARAM)
-            y <- DeferredMatrix(y, center=colMeans(y))
-            rank.out[[i]] <- t(y)
+            center <- colMeans(y)
+            if (flip) {
+                y <- cbind(y, -y)
+                center <- c(center, -center)
+            }
+            y <- DeferredMatrix(y, center=center)
+            y <- t(y)
         }
+        rank.out[[i]] <- y
 
         if (!is.na(d)) {
             BSPARAM@deferred <- deferred # TODO: add easier setters.
