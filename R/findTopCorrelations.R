@@ -276,7 +276,7 @@ NULL
 #' @importFrom BiocGenerics cbind
 #' @importFrom DelayedMatrixStats colVars
 #' @importFrom Matrix colMeans t
-#' @importFrom BiocSingular DeferredMatrix
+#' @importFrom ScaledMatrix ScaledMatrix
 #' @importFrom DelayedArray getAutoBPPARAM setAutoBPPARAM
 #' @importFrom scran scaledColRanks
 #' @importFrom BiocSingular runPCA
@@ -308,7 +308,7 @@ NULL
                 y <- cbind(y, -y)
                 center <- c(center, -center)
             }
-            y <- DeferredMatrix(y, center=center)
+            y <- ScaledMatrix(y, center=center)
             y <- t(y)
         }
         rank.out[[i]] <- y

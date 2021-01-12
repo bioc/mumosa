@@ -1,8 +1,8 @@
 Package: mumosa
 Type: Package
 Authors@R: person("Aaron", "Lun", role = c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com")
-Version: 0.99.5
-Date: 2020-12-20
+Version: 0.99.6
+Date: 2021-01-11
 License: GPL-3
 Title: Multi-Modal Single-Cell Analysis Methods
 Description: 
@@ -26,6 +26,7 @@ Imports:
     SummarizedExperiment,
     BiocNeighbors,
     BiocSingular,
+    ScaledMatrix,
     beachmat,
     scuttle,
     metapod,
