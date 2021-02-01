@@ -1,13 +1,14 @@
 Package: mumosa
 Type: Package
 Authors@R: person("Aaron", "Lun", role = c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com")
-Version: 0.99.6
-Date: 2021-01-11
+Version: 0.99.7
+Date: 2021-01-31
 License: GPL-3
 Title: Multi-Modal Single-Cell Analysis Methods
 Description: 
     Assorted utilities for multi-modal analyses of single-cell datasets.
-    Includes functions to combine multiple modalities for downstream analysis
+    Includes functions to combine multiple modalities for downstream analysis,
+    perform MNN-based batch correction across multiple modalities,
     and to compute correlations between assay values for different modalities.
 Depends: 
     SingleCellExperiment
@@ -31,6 +32,7 @@ Imports:
     scuttle,
     metapod,
     scran,
+    batchelor,
     uwot
 Suggests: 
     testthat,
