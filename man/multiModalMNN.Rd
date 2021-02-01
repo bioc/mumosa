@@ -9,9 +9,9 @@ multiModalMNN(
   batch = NULL,
   which = NULL,
   rescale.k = 50,
-  pca.common.args = list(),
-  pca.main.args = list(),
-  pca.alt.args = list(),
+  common.args = list(),
+  main.args = list(),
+  alt.args = list(),
   mnn.args = list(),
   BNPARAM = KmknnParam(),
   BPPARAM = SerialParam()
@@ -30,14 +30,14 @@ Defaults to the names of all alternative Experiments that are present in every o
 
 \item{rescale.k}{Integer scalar specifying the number of neighbors to use in \code{\link{rescaleByNeighbors}}.}
 
-\item{pca.common.args}{Further arguments to pass to \code{\link{multiBatchPCA}} to control the PCA for all modalities.}
+\item{common.args}{Named list of further arguments to control the PCA for all modalities.}
 
-\item{pca.main.args}{Further arguments to pass to \code{\link{multiBatchPCA}} to control the PCA for the main Experiments.
-Overrides any arguments of the same name in \code{pca.common.args}.}
+\item{main.args}{Named list of further arguments to control the PCA for the main Experiments.
+Overrides any arguments of the same name in \code{common.args}.}
 
-\item{pca.alt.args}{Further arguments to pass to \code{\link{multiBatchPCA}} to control the PCA for each alternative Experiment specified in \code{which}.
+\item{alt.args}{Named list of named lists of further arguments to control the PCA for each alternative Experiment specified in \code{which}.
 This should be a list where each entry is named after any alternative Experiment and contains an internal list of named arguments;
-these override any settings in \code{pca.common.args} in the PCA for the corresponding modality.}
+these override any settings in \code{common.args} in the PCA for the corresponding modality.}
 
 \item{mnn.args}{Further arguments to pass to \code{\link{reducedMNN}}, controlling the MNN correction.}
 
@@ -60,31 +60,46 @@ rescale the PCs to be of a comparable scale with \code{\link{rescaleByNeighbors}
 and finally correct in low-dimensional space with \code{\link{reducedMNN}}.
 Corrected expression values for each modality are then recovered in the same manner as described for \code{\link{fastMNN}}.
 
-Modality-specific arguments can be passed to the PCA step via the \code{pca.common.args}, \code{pca.main.args} and \code{pca.alt.args} arguments.
+Modality-specific arguments can be passed to the PCA step via the \code{common.args}, \code{main.args} and \code{alt.args} arguments.
 These mirror the corresponding arguments in \code{\link{applyMultiSCE}} - see the documentation for that function for more details.
 Additional arguments for the MNN step can be passed via \code{mnn.args}.
 Note that \code{batch} is used across all steps and must be specified as its own argument in the \code{multiModalMNN} function signature.
+
+Most arguments in \code{\link{multiBatchPCA}} can be specified in \code{common.args}, \code{main.args} or each entry of \code{alt.args}.
+This includes passing \code{d=NA} to turn off the PCA or \code{subset.row} to only use a subset of features for the PCA.
+Additionally, the following arguments are supported:
+\itemize{
+\item By default, a cosine-normalization is performed prior to the PCA for each modality.
+This can be disabled by passing \code{cos.norm=FALSE} to \code{common.args}, \code{main.args} or each entry of \code{alt.args}.
+\item Setting \code{correct.all} will reported corrected expression values for all features even when \code{subset.row} is specified.
+This can be used in \code{common.args}, \code{main.args} or each entry of \code{alt.args}.
+}
+
+Note that the function will look for \code{assay.type="logcounts"} by default in each entry of \code{...}.
+Users should perform log-normalization prior to calling \code{multiModalMNN}, most typically with \code{\link{multiBatchNorm}} - see Examples.
 }
 \examples{
 # Mocking up a gene expression + ADT dataset:
 library(scater)
 exprs_sce <- mockSCE()
-exprs_sce <- logNormCounts(exprs_sce)
-exprs_sce <- runPCA(exprs_sce)
-
 adt_sce <- mockSCE(ngenes=20) 
-adt_sce <- logNormCounts(adt_sce)
 altExp(exprs_sce, "ADT") <- adt_sce
 
-# Pretend we have three batches, and perform batch correction:
+# Pretend we have three batches for the sake of demonstration:
 batch <- sample(1:3, ncol(exprs_sce), replace=TRUE)
+
+# Normalizing first with batchelor::multiBatchNorm:
+library(batchelor)
+exprs_sce <- applyMultiSCE(exprs_sce, batch=batch, FUN=multiBatchNorm)
+
+# and perform batch correction:
 corrected <- multiModalMNN(exprs_sce, batch=batch, which="ADT")
 
 # Pass arguments to, e.g., use a subset of features for the RNA,
 # turn off the PCA for the ADTs:
 corrected2 <- multiModalMNN(exprs_sce, batch=batch, which="ADT",
-    pca.main.args=list(subset.row=1:500), 
-    pca.alt.args=list(ADT=list(d=NA)))
+    main.args=list(subset.row=1:500), 
+    alt.args=list(ADT=list(d=NA)))
 
 }
 \seealso{
