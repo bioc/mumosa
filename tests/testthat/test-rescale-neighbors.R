@@ -40,6 +40,13 @@ test_that("rescaleByNeighbors weighting is correct", {
     expect_equal(as.matrix(dist(ref)), as.matrix(dist(doubled)))
 })
 
+test_that("rescaleByNeighbors works with mixed DelayedArrays and matrices", {
+    ref <- rescaleByNeighbors(exprs_sce, dimreds="PCA", altexps="ADT")
+    combined <- rescaleByNeighbors(list(reducedDim(exprs_sce), DelayedArray::DelayedArray(t(logcounts(adt_sce)))))
+    expect_s4_class(combined, "DelayedArray")
+    expect_identical(ref, as.matrix(combined))
+})
+
 test_that("rescaleByNeighbors custom weighting is correct", {
     out <- rescaleByNeighbors(exprs_sce, dimreds="PCA", altexps="ADT", weights=c(1,sqrt(2)))
     ref <- rescaleByNeighbors(exprs_sce, dimreds="PCA", altexps="ADT", extras=list(t(logcounts(altExp(exprs_sce, "ADT")))))

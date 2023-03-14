@@ -21,14 +21,7 @@ computeCorrelations(x, y, ...)
 \S4method{computeCorrelations}{SummarizedExperiment}(x, y, use.names = TRUE, ..., assay.type = "logcounts")
 }
 \arguments{
-\item{x}{Normalized expression matrices containing features in the rows and cells in the columns.
-Each matrix should have the same set of columns but a different set of features, usually corresponding to different modes for the same cells.
-
-Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.
-
-Finally, \code{y} may be \code{NULL}, in which correlations are computed between features in \code{x}.}
-
-\item{y}{Normalized expression matrices containing features in the rows and cells in the columns.
+\item{x, y}{Normalized expression matrices containing features in the rows and cells in the columns.
 Each matrix should have the same set of columns but a different set of features, usually corresponding to different modes for the same cells.
 
 Alternatively, \linkS4class{SummarizedExperiment} objects containing such a matrix.

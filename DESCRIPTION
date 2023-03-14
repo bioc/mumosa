@@ -1,8 +1,8 @@
 Package: mumosa
 Type: Package
 Authors@R: person("Aaron", "Lun", role = c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com")
-Version: 1.7.0
-Date: 2021-01-31
+Version: 1.7.1
+Date: 2023-03-13
 License: GPL-3
 Title: Multi-Modal Single-Cell Analysis Methods
 Description: 
@@ -46,6 +46,6 @@ Suggests:
 VignetteBuilder: knitr
 biocViews: ImmunoOncology, SingleCell, RNASeq
 Encoding: UTF-8
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 URL: http://bioconductor.org/packages/mumosa
 BugReports: https://support.bioconductor.org/

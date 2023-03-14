@@ -84,6 +84,7 @@ NULL
 #' @importFrom BiocParallel SerialParam
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom BiocParallel bpstart bpstop
+#' @importFrom DelayedArray DelayedArray
 .rescale_modal_matrices <- function(x, k=50, weights=NULL, combine=TRUE, BNPARAM=KmknnParam(), BPPARAM=SerialParam()) {
     if (length(x)==0) {
         stop("'x' must contain one or more matrices")
@@ -106,6 +107,10 @@ NULL
     }
 
     if (combine) {
+        # Work around Bioconductor/DelayedArray#100 for the time being.
+        if (any(vapply(x, is, class="DelayedArray", TRUE))) {
+            x <- lapply(x, DelayedArray)
+        }
         do.call(cbind, x)
     } else {
         x
