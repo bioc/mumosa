@@ -60,7 +60,7 @@ And again on the protein component.
 
 ```{r}
 # TODO: sync this with the book.
-sceA <- altExp(sce)
+sceA <- as(altExp(sce), "SingleCellExperiment")
 statsA <- perCellQCMetrics(sceA)
 keep <- statsA$detected > 50 
 sceA <- sceA[,keep]
